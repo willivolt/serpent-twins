@@ -1,1 +1,1 @@
-./build swirl && cp bin/swirl autostart
+./build master && cp bin/master autostart
