@@ -962,6 +962,7 @@ void next_frame(int frame) {
   static int outer_eye_length = 22;
   static int inner_eye_length = 13;
   static int next_pattern = 0;
+  static int red_thing = -10;
 
   if (frame == 0) {
     init_tables();
@@ -985,6 +986,23 @@ void next_frame(int frame) {
       time_to_next_pattern = 5*SEC + (random() % (3*60*SEC));
       next_pattern =
           (next_pattern + (random() % (NUM_PATTERNS - 1))) % NUM_PATTERNS;
+    }
+  }
+
+  if (red_thing >= -6) {
+    for (int r = 0; r < NUM_ROWS; r++) {
+      float dr = red_thing - r;
+      float d = 6*6 - dr*dr;
+      if (d > 0) {
+        short alpha = sqrt(d)*256/6;
+        for (int c = 0; c < NUM_COLUMNS; c++) {
+          paint_rgb(pixels, pixel_index(r, c), 255, 0, 0, alpha);
+        }
+      }
+    }
+    red_thing++;
+    if (red_thing > NUM_ROWS) {
+      red_thing = -10;
     }
   }
 
@@ -1012,6 +1030,11 @@ void next_frame(int frame) {
   }
   if (strcmp(get_button_sequence(), "xxbxb") == 0) {
     right_outer_eye_start += 1;
+    clear_button_sequence();
+  }
+
+  if (strcmp(get_button_sequence(), "ababxxx") == 0) {
+    red_thing = -6;
     clear_button_sequence();
   }
 
