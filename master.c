@@ -1045,13 +1045,13 @@ byte pond_next_frame(pattern* p, pixel* pixels) {
   }
   for (int i = 0; i < NUM_ROWS; i++) {
     for (int j = 0; j < NUM_COLUMNS; j++) {
-      int e = (pond_position[i][j]-pond_position[i+1][j])*300 +
-          POND_ENV_MAP_SIZE/2;
+      int e = (pond_position[i][j]-pond_position[i+1][j])*400 +
+          POND_ENV_MAP_SIZE*0.35;
       e = (e < 0) ? 0 : (e > POND_ENV_MAP_SIZE - 1) ?
           POND_ENV_MAP_SIZE - 1 : e;
       unsigned char* ep = POND_ENV_MAP + e*3;
       paint_rgb(pixels, i*NUM_COLUMNS + ((i % 2) ? (NUM_COLUMNS-1-j) : j),
-                ep[0]*180/255, ep[1]*180/255, ep[2]*180/255, alpha);
+                ep[0]*200/255, ep[1]*240/255, ep[2]*240/255, alpha);
     }
   }
 
