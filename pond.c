@@ -20,104 +20,135 @@
 #include "sunset.pal"
 #include "spectrum.pal"
 
-#define NUM_COLS NUM_COLUMNS
-#define FRICTION_MIN_VELOCITY 0.02
-#define FRICTION_FORCE 10
-#define TICKS_PER_FRAME 10
-#define DUTY_CYCLE_ON 1.0
-#define DUTY_CYCLE_PERIOD 10.0
-#define TIME_SPEEDUP 2
+#define POND_FRICTION_MIN_VELOCITY 0.02
+#define POND_FRICTION_FORCE 10
+#define POND_TICKS_PER_FRAME 10
+#define POND_DUTY_CYCLE_ON 1.0
+#define POND_DUTY_CYCLE_PERIOD 10.0
+#define POND_TIME_SPEEDUP 2
 
-unsigned char pixels[NUM_ROWS*NUM_COLS*3];
-float position[NUM_ROWS][NUM_COLS];
-float velocity[NUM_ROWS][NUM_COLS];
-#define MASS 1  // kg
-#define SPRING_CONSTANT 300  // N/m
+unsigned char pixels[NUM_ROWS*NUM_COLUMNS*3];
+float pond_position[NUM_ROWS][NUM_COLUMNS];
+float pond_velocity[NUM_ROWS][NUM_COLUMNS];
+#define POND_MASS 1  // kg
+#define POND_SPRING_CONSTANT 300  // N/m
 
-void tick(float dt) {
+void pond_tick(float dt) {
   for (int i = 0; i < NUM_ROWS; i++) {
-    for (int j = 0; j < NUM_COLS; j++) {
-      float delta = (position[i][(j + 1) % NUM_COLS] - position[i][j]) +
-          (position[i][(j + NUM_COLS - 1) % NUM_COLS] - position[i][j]);
+    for (int j = 0; j < NUM_COLUMNS; j++) {
+      float delta =
+          (pond_position[i][(j + 1) % NUM_COLUMNS] - pond_position[i][j]) +
+          (pond_position[i][(j + NUM_COLUMNS - 1) % NUM_COLUMNS] -
+              pond_position[i][j]);
       if (i > 0) {
-        delta += (position[i - 1][j] - position[i][j]);
+        delta += (pond_position[i - 1][j] - pond_position[i][j]);
       }
       if (i < NUM_ROWS - 1) {
-        delta += (position[i + 1][j] - position[i][j]);
+        delta += (pond_position[i + 1][j] - pond_position[i][j]);
       }
-      delta += -position[i][j]*0.02;
-      float force = SPRING_CONSTANT * delta;
-      if (velocity[i][j] > FRICTION_MIN_VELOCITY) {
-        force -= FRICTION_FORCE;
-      } else if (velocity[i][j] < -FRICTION_MIN_VELOCITY) {
-        force += FRICTION_FORCE;
+      delta += -pond_position[i][j]*0.02;
+      float force = POND_SPRING_CONSTANT * delta;
+      if (pond_velocity[i][j] > POND_FRICTION_MIN_VELOCITY) {
+        force -= POND_FRICTION_FORCE;
+      } else if (pond_velocity[i][j] < -POND_FRICTION_MIN_VELOCITY) {
+        force += POND_FRICTION_FORCE;
       }
-      velocity[i][j] += force/MASS * dt;
+      pond_velocity[i][j] += force/POND_MASS * dt;
     }
   }
   for (int i = 0; i < NUM_ROWS; i++) {
-    for (int j = 0; j < NUM_COLS; j++) {
-      position[i][j] += velocity[i][j] * dt;
+    for (int j = 0; j < NUM_COLUMNS; j++) {
+      pond_position[i][j] += pond_velocity[i][j] * dt;
     }
   }
 }
 
-int drop_x, drop_y, last_on = 0;
-float drop_impulse = 2000/MASS;
-#define ENV_MAP_SIZE 800
-unsigned char env_map[2100];
-#define ENV_MAP SUNSET_PALETTE
+int pond_drop_x, pond_drop_y, pond_last_on = 0;
+float pond_drop_impulse = 2000/POND_MASS;
+#define POND_ENV_MAP_SIZE 800
+unsigned char pond_env_map[2400];
+#define POND_ENV_MAP pond_env_map
+typedef unsigned short word;
 
 void next_frame(int f) {
-  float t = TIME_SPEEDUP * (float) f / FPS;
+  float t = POND_TIME_SPEEDUP * (float) f / FPS;
   if (f == 0) {
     for (int e = 0; e < 400; e++) {
-      env_map[e*3] = e/2;
-      env_map[e*3+1] = e/4;
-      env_map[e*3+2] = 200;
+      pond_env_map[e*3] = e/2;
+      pond_env_map[e*3+1] = e/4;
+      pond_env_map[e*3+2] = 200;
     }
     for (int e = 400; e < 700; e++) {
-      env_map[e*3] = 200;
-      env_map[e*3+1] = 410 - e*0.4;
-      env_map[e*3+2] = 0;
+      pond_env_map[e*3] = 200;
+      pond_env_map[e*3+1] = 410 - e*0.4;
+      pond_env_map[e*3+2] = 0;
+    }
+    byte* sunset = SUNSET_PALETTE;
+    byte* p = pond_env_map;
+    for (int e = 0; e < POND_ENV_MAP_SIZE; e++) {
+      byte r = *(sunset++);
+      byte g = *(sunset++);
+      byte b = *(sunset++);
+      short rr = ((short) (r - 128))*1.2 + 128;
+      short gg = ((short) (g - 128))*1.2 + 128;
+      short bb = ((short) (b - 128))*1.2 + 128;
+      *(p++) = rr < 0 ? 0 : rr > 255 ? 255 : rr;
+      *(p++) = gg < 0 ? 0 : gg > 255 ? 255 : gg;
+      *(p++) = bb < 0 ? 0 : bb > 255 ? 255 : bb;
+      /*
+      byte value = e*128/POND_ENV_MAP_SIZE;
+      *(p++) = ((word) r * value)>>8;
+      *(p++) = ((word) g * value)>>8;
+      *(p++) = ((word) b * value)>>8;
+      */
+      /*
+      *(p++) = r; //((word) r * (255 - r)) >> 8;
+      *(p++) = ((word) g * (255 - r)) >> 8;
+      *(p++) = ((word) b * (255 - r)) >> 8;
+      */
     }
     for (int i = 0; i < NUM_ROWS; i++) {
-      for (int j = 0; j < NUM_COLS; j++) {
-        position[i][j] = 0;
-        velocity[i][j] = 0;
+      for (int j = 0; j < NUM_COLUMNS; j++) {
+        pond_position[i][j] = 0;
+        pond_velocity[i][j] = 0;
       }
     }
   }
 
-  float duty_phase = t - ((int) (t / DUTY_CYCLE_PERIOD) * DUTY_CYCLE_PERIOD);
-  if (duty_phase >= 0 && duty_phase < DUTY_CYCLE_ON) {
-    if (last_on == 0) {
-      drop_x = rand() % (NUM_ROWS - 1);
-      drop_y = rand() % NUM_COLS;
-      drop_impulse = -drop_impulse;
+  float duty_phase =
+      t - ((int) (t / POND_DUTY_CYCLE_PERIOD) * POND_DUTY_CYCLE_PERIOD);
+  if (duty_phase >= 0 && duty_phase < POND_DUTY_CYCLE_ON) {
+    if (pond_last_on == 0) {
+      pond_drop_x = rand() % (NUM_ROWS - 1);
+      pond_drop_y = rand() % NUM_COLUMNS;
+      pond_drop_impulse = -pond_drop_impulse;
     }
-    float k = sin(duty_phase/DUTY_CYCLE_ON*M_PI);
-    velocity[drop_x][drop_y] += drop_impulse*k;
-    velocity[drop_x][(drop_y + 1) % NUM_COLS] += drop_impulse*k;
-    velocity[drop_x + 1][drop_y] += drop_impulse*k;
-    velocity[drop_x + 1][(drop_y + 1) % NUM_COLS] += drop_impulse*k;
-    last_on = 1;
+    float k = sin(duty_phase/POND_DUTY_CYCLE_ON*M_PI);
+    pond_velocity[pond_drop_x][pond_drop_y] += pond_drop_impulse*k;
+    pond_velocity[pond_drop_x][(pond_drop_y + 1) % NUM_COLUMNS] +=
+        pond_drop_impulse*k;
+    pond_velocity[pond_drop_x + 1][pond_drop_y] += pond_drop_impulse*k;
+    pond_velocity[pond_drop_x + 1][(pond_drop_y + 1) % NUM_COLUMNS] +=
+        pond_drop_impulse*k;
+    pond_last_on = 1;
   } else {
-    last_on = 0;
+    pond_last_on = 0;
   }
-  for (int j = 0; j < NUM_COLS; j++) {
-    position[0][j] = 0;
-    position[NUM_ROWS - 1][j] = 0;
+  for (int j = 0; j < NUM_COLUMNS; j++) {
+    pond_position[0][j] = 0;
+    pond_position[NUM_ROWS - 1][j] = 0;
   }
-  for (int t = 0; t < TICKS_PER_FRAME; t++) {
-    tick(TIME_SPEEDUP * 1.0/FPS/TICKS_PER_FRAME);
+  for (int t = 0; t < POND_TICKS_PER_FRAME; t++) {
+    pond_tick(POND_TIME_SPEEDUP * 1.0/FPS/POND_TICKS_PER_FRAME);
   }
   for (int i = 0; i < NUM_ROWS; i++) {
-    for (int j = 0; j < NUM_COLS; j++) {
-      int e = (position[i][j]-position[i+1][j])*300 + ENV_MAP_SIZE/2;
-      e = (e < 0) ? 0 : (e > ENV_MAP_SIZE - 1) ? ENV_MAP_SIZE - 1 : e;
-      unsigned char* ep = ENV_MAP + e*3;
-      set_rgb(pixels, i*NUM_COLS + ((i % 2) ? (NUM_COLS-1-j) : j),
+    for (int j = 0; j < NUM_COLUMNS; j++) {
+      int e = (pond_position[i][j]-pond_position[i+1][j])*300 +
+          POND_ENV_MAP_SIZE/2;
+      e = (e < 0) ? 0 : (e > POND_ENV_MAP_SIZE - 1) ?
+          POND_ENV_MAP_SIZE - 1 : e;
+      unsigned char* ep = POND_ENV_MAP + e*3;
+      set_rgb(pixels, i*NUM_COLUMNS + ((i % 2) ? (NUM_COLUMNS-1-j) : j),
               ep[0]*180/255, ep[1]*180/255, ep[2]*180/255);
     }
   }
