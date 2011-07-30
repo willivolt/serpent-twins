@@ -21,32 +21,49 @@ typedef struct {
 colour temp_colour;
 vector temp_vector;
 
-#define SEG_NK 50 // number of vertices along the length of a segment
-#define SEG_NA 100 // number of vertices around the circumference of a segment
-#define SEG_LENGTH 1.4 // m
-#define SEG_SPACING 0.2 // m
+// Serpent physical size
+#define SEG_LENGTH 1.4 // metres
+#define SEG_SPACING 0.2 // metres
 #define NUM_SEGS 10 // number of segments in the whole serpent
 #define TOTAL_LENGTH (NUM_SEGS*SEG_LENGTH + (NUM_SEGS - 1)*SEG_SPACING)
-#define RADIUS 0.5  // m
-#define SERPENT_T(seg, frac) \
-    ((seg*(SEG_LENGTH + SEG_SPACING) + frac*SEG_LENGTH)/TOTAL_LENGTH)
+#define RADIUS 0.5 // metres
 
+// Camera parameters
 #define FOV_DEGREES 30
 int orbiting = 0, dollying = 0;
-float start_angle, start_height, start_distance;
+float start_angle, start_elevation, start_distance;
 int start_x, start_y;
-float orbit_angle = 0.0;
-float tan_camera_height = 0.5;
-float camera_distance = 20.0;
+float orbit_angle = 10.0; // camera orbit angle, degrees
+float camera_elevation = 30; // camera elevation angle, degrees
+float camera_distance = 25.0; // metres
 float camera_aspect = 1.0;
 
-colour grid[(SEG_NK + 1)*SEG_NA];
+// LED colours
+#define LED_NK 12 // number of LEDs along the length of a segment
+#define LED_NA 25 // number of LEDs around the circumference of a segment
+colour leds[NUM_SEGS][LED_NK][LED_NA];
+colour BASE_COLOUR = {0.05, 0.05, 0.05};
 
-// 0.0 <= t <= 1.0
-vector compute_spine_point(float t) {
+// Serpent rendering resolution ("unit" = "distance between vertices")
+#define PAD_UNITS 2 // number of units from edge to first ring of LEDs
+#define LED_NK_UNITS 4 // number of units between adjacent rings of LEDs
+#define LED_NA_UNITS 4 // number of units between adjacent LEDs on a ring
+#define SEG_NK (PAD_UNITS*2 + LED_NK_UNITS*(LED_NK - 1)) // units along length
+#define SEG_NA (LED_NA_UNITS*LED_NA) // units around segment circumference
+colour render_grids[NUM_SEGS][(SEG_NK + 1)*SEG_NA];
+
+// Blur convolution matrix
+#define BLUR_Z 2 // depth of LED under surface, in render units
+#define BLUR_RADIUS 8
+#define BLUR_WIDTH (BLUR_RADIUS*2 + 1)
+#define BLUR_BRIGHTNESS_SCALE 0.4
+float blur[BLUR_WIDTH][BLUR_WIDTH];
+
+vector compute_spine_point(int segment, float fraction) {
+  float t = segment*(SEG_LENGTH + SEG_SPACING) + fraction*SEG_LENGTH;
   vector result;
-  result.x = (t - 0.5)*TOTAL_LENGTH;
-  result.y = sin(t*4.0)*2;  // a gentle curve
+  result.x = t - TOTAL_LENGTH/2;
+  result.y = sin(4*t/TOTAL_LENGTH)*2;  // a gentle curve
   result.z = 0;
   return result;
 }
@@ -99,7 +116,7 @@ vector multiply(float f, vector v) {
 vector compute_cylinder_point(
     vector spine, vector up, vector right, int a, int na) {
   float angle = 2*M_PI*a/na;
-  vector upward = multiply(cos(angle)*RADIUS, up);
+  vector upward = multiply(-cos(angle)*RADIUS, up);  // assume seam on bottom
   vector rightward = multiply(sin(angle)*RADIUS, right);
   return add(add(spine, upward), rightward);
 }
@@ -136,12 +153,12 @@ void draw_axes() {
 // k is an index in the length direction, 0 <= k <= nk
 // a is an index in the angular direction, 0 <= a < na
 // grid is an array of colours indexed by [k][a], with (k+1)*a elements
-void draw_segment(float tmin, float tmax, colour* grid, int nk, int na) {
+void draw_segment(int segment, colour* grid, int nk, int na) {
   vector spine[nk + 1];
   vector up = {0, 0, 1};
   vector right[nk + 1];
   for (int k = 0; k <= nk; k++) {
-    spine[k] = compute_spine_point(tmin + (tmax - tmin)*k/nk);
+    spine[k] = compute_spine_point(segment, ((float) k)/nk);
   }
   for (int k = 0; k <= nk; k++) {
     vector previous = spine[k > 0 ? k - 1 : 0];
@@ -166,7 +183,7 @@ void draw_segment(float tmin, float tmax, colour* grid, int nk, int na) {
 void display(void) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   for (int s = 0; s < NUM_SEGS; s++) {
-    draw_segment(SERPENT_T(s, 0), SERPENT_T(s, 1), grid, SEG_NK, SEG_NA);
+    draw_segment(s, render_grids[s], SEG_NK, SEG_NA);
   }
   draw_axes();
   glutSwapBuffers();
@@ -178,9 +195,9 @@ void update_camera() {
   gluPerspective(FOV_DEGREES, camera_aspect, 0.1, 1e3); // fov, aspect, zrange
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-  gluLookAt(0, -camera_distance, tan_camera_height*camera_distance, // eye
-            0, 0, 0, // target
-            0, 0, 1); // up
+  float camera_y = -cos(camera_elevation*M_PI/180)*camera_distance;
+  float camera_z = sin(camera_elevation*M_PI/180)*camera_distance;
+  gluLookAt(0, camera_y, camera_z, /* target */ 0, 0, 0, /* up */ 0, 0, 1);
   glRotatef(orbit_angle, 0, 0, 1);
   display();
 }
@@ -200,7 +217,7 @@ void mouse(int button, int state, int x, int y) {
   } else if (state == GLUT_DOWN) {
     orbiting = 1;
     start_angle = orbit_angle;
-    start_height = tan_camera_height;
+    start_elevation = camera_elevation;
     start_x = x;
     start_y = y;
   } else {
@@ -212,14 +229,13 @@ void mouse(int button, int state, int x, int y) {
 void motion(int x, int y) {
   if (orbiting) {
     orbit_angle = start_angle + (x - start_x)*1.0;
-    tan_camera_height = start_height + (y - start_y)*0.01;
+    float elevation = start_elevation + (y - start_y)*1.0;
+    camera_elevation = elevation < -89 ? -89 : elevation > 89 ? 89 : elevation;
     update_camera();
   }
   if (dollying) {
-    camera_distance = start_distance + (y - start_y)*0.1;
-    if (camera_distance < 1.0) {
-      camera_distance = 1.0;
-    }
+    float distance = start_distance + (y - start_y)*0.1;
+    camera_distance = distance < 1.0 ? 1.0 : distance;
     update_camera();
   }
 }
@@ -230,19 +246,63 @@ void keyboard(unsigned char key, int x, int y) {
   }
 }
 
+void update_render_grid() {
+  for (int s = 0; s < NUM_SEGS; s++) {
+    for (int k = 0; k <= SEG_NK; k++) {
+      for (int a = 0; a < SEG_NA; a++) {
+        render_grids[s][k*SEG_NA + a] = BASE_COLOUR;
+      }
+    }
+    for (int lk = 0; lk <= LED_NK; lk++) {
+      for (int la = 0; la < LED_NA; la++) {
+        int k = PAD_UNITS + lk*LED_NK_UNITS;
+        int a = la*LED_NA_UNITS + LED_NA_UNITS/2;
+        float r = leds[s][lk][la].r;
+        float g = leds[s][lk][la].g;
+        float b = leds[s][lk][la].b;
+        for (int dx = -BLUR_RADIUS; dx <= BLUR_RADIUS; dx++) {
+          for (int dy = -BLUR_RADIUS; dy <= BLUR_RADIUS; dy++) {
+            if (k + dx >= 0 && k + dx <= SEG_NK) {
+              int index = (k + dx)*SEG_NA + ((a + dy) % SEG_NA);
+              float brightness = blur[dx + BLUR_RADIUS][dy + BLUR_RADIUS];
+              render_grids[s][index].r += r*brightness;
+              render_grids[s][index].g += g*brightness;
+              render_grids[s][index].b += b*brightness;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 void init(void) {
   /* Use depth buffering for hidden surface elimination. */
   glEnable(GL_DEPTH_TEST);
   glShadeModel(GL_SMOOTH);
 
-  /* Set up some colours. */
-  for (int k = 0; k <= SEG_NK; k++) {
-    for (int a = 0; a < SEG_NA; a++) {
-      grid[k*SEG_NA + a].r = k % 2;
-      grid[k*SEG_NA + a].g = a % 2;
-      grid[k*SEG_NA + a].b = 0.1;
+  /* Set up the blur convolution matrix. */
+  for (int x = 0; x < BLUR_WIDTH; x++) {
+    for (int y = 0; y < BLUR_WIDTH; y++) {
+      int dx = x - BLUR_RADIUS;
+      int dy = y - BLUR_RADIUS;
+      float distance_squared = dx*dx + dy*dy + BLUR_Z*BLUR_Z;
+      blur[x][y] = BLUR_Z*BLUR_Z/distance_squared*BLUR_BRIGHTNESS_SCALE;
     }
   }
+
+  /* Set up some colours. */
+  for (int s = 0; s < NUM_SEGS; s++) {
+    for (int k = 0; k <= LED_NK; k++) {
+      for (int a = 0; a < LED_NA; a++) {
+        leds[s][k][a].r = k % 2;
+        leds[s][k][a].g = a % 2;
+        leds[s][k][a].b = s*0.1;
+      }
+    }
+  }
+
+  update_render_grid();
 }
 
 int main(int argc, char **argv) {
