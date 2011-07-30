@@ -1,3 +1,2 @@
 syntax: glob
-*.o
-serpent
+build

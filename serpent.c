@@ -8,6 +8,8 @@
 #include <GL/glut.h>
 #endif
 
+#include "serpent.h"
+
 typedef struct {
   double x, y, z;
 } vector;
@@ -62,7 +64,7 @@ colour render_grids[NUM_SEGS][(SEG_NK + 1)*SEG_NA];
 #define BLUR_Z 1.5 // depth of LED under surface, in render units
 #define BLUR_RADIUS 10
 #define BLUR_WIDTH (BLUR_RADIUS*2 + 1)
-#define BLUR_BRIGHTNESS_SCALE 0.3
+#define BLUR_BRIGHTNESS_SCALE 0.2
 double blur[BLUR_WIDTH][BLUR_WIDTH];
 
 // Animation parameters
@@ -311,12 +313,10 @@ double get_time() {
 
 int frame = 0;
 
-void next_frame();
-
 void idle(void) {
   double now = get_time();
   if (now >= next_frame_time) {
-    next_frame();
+    next_frame(frame);
     update_render_grid();
     display();
     next_frame_time += 1.0/FPS;
@@ -362,6 +362,7 @@ void init(void) {
   next_frame_time = start_time = get_time();
 }
 
+/* The main public interface.  Implement next_frame() and call this. */
 void put_pixels(int segment, unsigned char* pixels, int n) {
   for (int i = 0; i < n; i++) {
     int k = i/LED_NA;
@@ -370,18 +371,6 @@ void put_pixels(int segment, unsigned char* pixels, int n) {
     leds[segment][k][a].g = *(pixels++);
     leds[segment][k][a].b = *(pixels++);
   }
-}
-
-unsigned char pixels[1000];
-
-void next_frame() {
-  int pos = frame % 300;
-  for (int i = 0; i < 300; i++) {
-    pixels[i*3] = (i == pos) ? 255 : 0;
-    pixels[i*3 + 1] = (i == pos + 1) ? 255 : 0;
-    pixels[i*3 + 2] = (i == pos + 2) ? 255 : 0;
-  }
-  put_pixels(0, pixels, 300);
 }
 
 int main(int argc, char **argv) {

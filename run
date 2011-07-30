@@ -1,0 +1,9 @@
+#!/bin/bash
+
+CC=gcc
+COPTS="-framework OpenGL -framework GLUT -std=c99"
+
+name=$1
+if [ ! -d build ]; then mkdir build; fi
+
+$CC $COPTS serpent.c $name.c -o build/$name && build/$name
