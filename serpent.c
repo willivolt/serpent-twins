@@ -40,7 +40,7 @@ vector temp_vector;
 int orbiting = 0, dollying = 0;
 double start_angle, start_elevation, start_distance;
 int start_x, start_y;
-double orbit_angle = 10.0; // camera orbit angle, degrees
+double orbit_angle = 200.0; // camera orbit angle, degrees
 double camera_elevation = 30; // camera elevation angle, degrees
 double camera_distance = 25.0; // metres
 double camera_aspect = 1.0;
