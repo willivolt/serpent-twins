@@ -16,6 +16,10 @@ typedef struct {
   double r, g, b;
 } colour;
 
+typedef struct {
+  unsigned char r, g, b;
+} led_colour;
+
 #define set_colour(c) ((temp_colour = c), glColor3dv(&(temp_colour.r)))
 #define put_vertex(v) ((temp_vector = v), glVertex3dv(&(temp_vector.x)))
 
@@ -42,8 +46,9 @@ double camera_aspect = 1.0;
 // LED colours
 #define LED_NK 12 // number of LEDs along the length of a segment
 #define LED_NA 25 // number of LEDs around the circumference of a segment
-colour leds[NUM_SEGS][LED_NK][LED_NA];
+led_colour leds[NUM_SEGS][LED_NK][LED_NA];
 colour BASE_COLOUR = {0.05, 0.05, 0.05};
+colour curves[256];
 
 // Serpent rendering resolution ("unit" = "distance between vertices")
 #define PAD_UNITS 2 // number of units from edge to first ring of LEDs
@@ -279,9 +284,9 @@ void update_render_grid() {
       for (int la = 0; la < LED_NA; la++) {
         int k = PAD_UNITS + lk*LED_NK_UNITS;
         int a = la*LED_NA_UNITS + LED_NA_UNITS/2;
-        double r = leds[s][lk][la].r;
-        double g = leds[s][lk][la].g;
-        double b = leds[s][lk][la].b;
+        double r = curves[leds[s][lk][la].r].r;
+        double g = curves[leds[s][lk][la].g].g;
+        double b = curves[leds[s][lk][la].b].b;
         for (int dx = -BLUR_RADIUS; dx <= BLUR_RADIUS; dx++) {
           for (int dy = -BLUR_RADIUS; dy <= BLUR_RADIUS; dy++) {
             if (k + dx >= 0 && k + dx <= SEG_NK) {
@@ -310,9 +315,9 @@ void next_frame() {
   int s = rand() % NUM_SEGS;
   int k = rand() % LED_NK;
   int a = rand() % LED_NA;
-  leds[s][k][a].r = 1;
-  leds[s][k][a].g = 1;
-  leds[s][k][a].b = 1;
+  leds[s][k][a].r = 255;
+  leds[s][k][a].g = 255;
+  leds[s][k][a].b = 255;
 }
 
 void idle(void) {
@@ -341,6 +346,13 @@ void init(void) {
       double distance_squared = dx*dx + dy*dy + BLUR_Z*BLUR_Z;
       blur[x][y] = BLUR_Z*BLUR_Z/distance_squared*BLUR_BRIGHTNESS_SCALE;
     }
+  }
+
+  /* Set up the colour transfer curves. */
+  for (int i = 0; i < 256; i++) {
+    curves[i].r = i ? 0.3 + 0.7*(i/255.0) : 0;
+    curves[i].g = i ? 0.3 + 0.7*(i/255.0) : 0;
+    curves[i].b = i ? 0.3 + 0.7*(i/255.0) : 0;
   }
 
   /* Set up the LED grids. */
