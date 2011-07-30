@@ -36,7 +36,7 @@ int orbiting = 0, dollying = 0;
 float start_angle, start_height, start_distance;
 int start_x, start_y;
 float orbit_angle = 0.0;
-float tan_camera_height = 1.0;
+float tan_camera_height = 0.5;
 float camera_distance = 20.0;
 float camera_aspect = 1.0;
 
@@ -178,7 +178,7 @@ void update_camera() {
   gluPerspective(FOV_DEGREES, camera_aspect, 0.1, 1e3); // fov, aspect, zrange
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-  gluLookAt(-camera_distance, 0, tan_camera_height*camera_distance, // eye
+  gluLookAt(0, -camera_distance, tan_camera_height*camera_distance, // eye
             0, 0, 0, // target
             0, 0, 1); // up
   glRotatef(orbit_angle, 0, 0, 1);
@@ -249,6 +249,7 @@ int main(int argc, char **argv) {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutCreateWindow("Serpent");
+  glutReshapeWindow(1024, 768);
   glutReshapeFunc(reshape);
   glutDisplayFunc(display);
   glutMouseFunc(mouse);
