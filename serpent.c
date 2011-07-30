@@ -157,6 +157,16 @@ void draw_axes() {
   glEnd();
 }
 
+void draw_disc(vector center, vector up, vector right, int na) {
+  glBegin(GL_TRIANGLE_FAN);
+  put_vertex(center);
+  for (int ai = 0; ai <= na; ai++) {
+    int a = ai % na;
+    put_vertex(compute_cylinder_point(center, up, right, a, na));
+  }
+  glEnd();
+}
+
 // k is an index in the length direction, 0 <= k <= nk
 // a is an index in the angular direction, 0 <= a < na
 // grid is an array of colours indexed by [k][a], with (k+1)*a elements
@@ -185,6 +195,9 @@ void draw_segment(int segment, colour* grid, int nk, int na) {
     }
     glEnd();
   }
+  set_colour(BASE_COLOUR);
+  draw_disc(spine[0], up, right[0], na);
+  draw_disc(spine[nk], up, right[nk], na);
 }
 
 void display(void) {
