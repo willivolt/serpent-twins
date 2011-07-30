@@ -74,7 +74,7 @@ double next_frame_time;
 vector compute_spine_point(int segment, double fraction) {
   double t = segment*(SEG_LENGTH + SEG_SPACING) + fraction*SEG_LENGTH;
   vector result;
-  result.x = t - TOTAL_LENGTH/2;
+  result.x = TOTAL_LENGTH/2 - t;
   result.y = sin(4*t/TOTAL_LENGTH)*2;  // a gentle curve
   result.z = 0;
   return result;
@@ -311,14 +311,7 @@ double get_time() {
 
 int frame = 0;
 
-void next_frame() {
-  int s = rand() % NUM_SEGS;
-  int k = rand() % LED_NK;
-  int a = rand() % LED_NA;
-  leds[s][k][a].r = 255;
-  leds[s][k][a].g = 255;
-  leds[s][k][a].b = 255;
-}
+void next_frame();
 
 void idle(void) {
   double now = get_time();
@@ -367,6 +360,28 @@ void init(void) {
   }
 
   next_frame_time = start_time = get_time();
+}
+
+void put_pixels(int segment, unsigned char* pixels, int n) {
+  for (int i = 0; i < n; i++) {
+    int k = i/LED_NA;
+    int a = (k % 2) ? (i % LED_NA) : (LED_NA - 1 - i % LED_NA);
+    leds[segment][k][a].r = *(pixels++);
+    leds[segment][k][a].g = *(pixels++);
+    leds[segment][k][a].b = *(pixels++);
+  }
+}
+
+unsigned char pixels[1000];
+
+void next_frame() {
+  int pos = frame % 300;
+  for (int i = 0; i < 300; i++) {
+    pixels[i*3] = (i == pos) ? 255 : 0;
+    pixels[i*3 + 1] = (i == pos + 1) ? 255 : 0;
+    pixels[i*3 + 2] = (i == pos + 2) ? 255 : 0;
+  }
+  put_pixels(0, pixels, 300);
 }
 
 int main(int argc, char **argv) {
