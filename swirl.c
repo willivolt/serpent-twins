@@ -1,7 +1,8 @@
 #include "serpent.h"
 
 #define CIRCUMFERENCE 25
-#define HEIGHT 12
+#define HEIGHT 120
+#define PIXELS_PER_SEGMENT (CIRCUMFERENCE*HEIGHT/10)
 #define SQUARE_WAVE_AMPLITUDE 0.5
 #define SQUARE_WAVE_PERIOD 100
 #define SPRING_CONSTANT 0.05
@@ -59,5 +60,8 @@ void next_frame(int x) {
       set_hue(i, j, shift[i] + (float) j / CIRCUMFERENCE);
     }
   }
-  put_pixels(0, pixels, CIRCUMFERENCE*HEIGHT);
+
+  for (int s = 0; s < 10; s++) {
+    put_pixels(s, pixels + s*PIXELS_PER_SEGMENT*3, PIXELS_PER_SEGMENT);
+  }
 }
