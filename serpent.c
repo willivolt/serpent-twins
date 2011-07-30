@@ -54,8 +54,8 @@ colour BASE_COLOUR = {0.05, 0.05, 0.05};
 colour render_grids[NUM_SEGS][(SEG_NK + 1)*SEG_NA];
 
 // Blur convolution matrix
-#define BLUR_Z 2 // depth of LED under surface, in render units
-#define BLUR_RADIUS 12
+#define BLUR_Z 1.5 // depth of LED under surface, in render units
+#define BLUR_RADIUS 10
 #define BLUR_WIDTH (BLUR_RADIUS*2 + 1)
 #define BLUR_BRIGHTNESS_SCALE 0.3
 double blur[BLUR_WIDTH][BLUR_WIDTH];
