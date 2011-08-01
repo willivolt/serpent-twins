@@ -16,10 +16,6 @@
 #define FRICTION_FORCE 0.05  // kg*rev^2/s
 #define FRICTION_MIN_VELOCITY 0.01  // rev/s
 
-#define set_red(index, value) pixels[(index)*3] = value
-#define set_green(index, value) pixels[(index)*3 + 1] = value
-#define set_blue(index, value) pixels[(index)*3 + 2] = value
-
 unsigned char pixels[CIRCUMFERENCE*LENGTH*3];
 float position[LENGTH];  // rev
 float velocity[LENGTH];  // rev/s
@@ -40,9 +36,7 @@ void set_hue(int row, int angle, float hue) {
 
   int index = (row * CIRCUMFERENCE) +
       ((row % 2) ? angle : CIRCUMFERENCE - 1 - angle);
-  set_red(index, r ? r : 1);
-  set_green(index, g ? g : 1);
-  set_blue(index, b ? b : 1);
+  set_rgb(pixels, index, r ? r : 1, g ? g : 1, b ? b : 1);
 }
 
 void tick(float dt) {

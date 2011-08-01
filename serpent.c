@@ -343,9 +343,9 @@ void init(void) {
 
   /* Set up the colour transfer curves. */
   for (int i = 0; i < 256; i++) {
-    curves[i].r = i ? 0.3 + 0.7*(i/255.0) : 0;
-    curves[i].g = i ? 0.3 + 0.7*(i/255.0) : 0;
-    curves[i].b = i ? 0.3 + 0.7*(i/255.0) : 0;
+    curves[i].r = i ? 0.2 + 0.8*(i/255.0) : 0;
+    curves[i].g = i ? 0.2 + 0.8*(i/255.0) : 0;
+    curves[i].b = i ? 0.2 + 0.8*(i/255.0) : 0;
   }
 
   /* Set up the LED grids. */
