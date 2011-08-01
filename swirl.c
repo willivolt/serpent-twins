@@ -1,24 +1,32 @@
+#include <math.h>
 #include "serpent.h"
 
 #define CIRCUMFERENCE 25
-#define HEIGHT 120
-#define PIXELS_PER_SEGMENT (CIRCUMFERENCE*HEIGHT/10)
-#define SQUARE_WAVE_AMPLITUDE 0.5
-#define SQUARE_WAVE_PERIOD 100
-#define SPRING_CONSTANT 0.05
-#define FRICTION 0.2
+#define LENGTH 120
+#define PIXELS_PER_SEGMENT (CIRCUMFERENCE*LENGTH/10)
+#define SINE_WAVE_AMPLITUDE 0.8
+#define SINE_WAVE_PERIOD 80
+#define DUTY_CYCLE_ON 120
+#define DUTY_CYCLE_OFF 200
+
+#define TICKS_PER_FRAME 10 
+#define FPS 20
+#define SPRING_CONSTANT 3000  // kg/s^2
+#define MASS 0.1  // kg
+#define FRICTION_FORCE 0.05  // kg*rev^2/s
+#define FRICTION_MIN_VELOCITY 0.01  // rev/s
 
 #define set_red(index, value) pixels[(index)*3] = value
 #define set_green(index, value) pixels[(index)*3 + 1] = value
 #define set_blue(index, value) pixels[(index)*3 + 2] = value
 
-unsigned char pixels[CIRCUMFERENCE*HEIGHT*3];
-float shift[HEIGHT];
-float velocity[HEIGHT];
+unsigned char pixels[CIRCUMFERENCE*LENGTH*3];
+float position[LENGTH];  // rev
+float velocity[LENGTH];  // rev/s
 
 void set_hue(int row, int angle, float hue) {
   unsigned char r = 0, g = 0, b = 0;
-  int k = (hue - (int) hue) * 255 * 3;
+  int k = (hue - floor(hue)) * 255 * 3;
   if (k < 255) {
     r = 255 - k;
     g = k;
@@ -37,27 +45,43 @@ void set_hue(int row, int angle, float hue) {
   set_blue(index, b ? b : 1);
 }
 
+void tick(float dt) {
+  for (int i = 1; i < LENGTH; i++) {
+    float force = SPRING_CONSTANT * (position[i-1] - position[i]);
+    if (i < LENGTH - 1) {
+      force += SPRING_CONSTANT * (position[i+1] - position[i]);
+    }
+    if (velocity[i] > FRICTION_MIN_VELOCITY) {
+      force -= FRICTION_FORCE;
+    } else if (velocity[i] < -FRICTION_MIN_VELOCITY) {
+      force += FRICTION_FORCE;
+    }
+    velocity[i] += force/MASS * dt;
+  }
+  for (int i = 1; i < LENGTH; i++) {
+    position[i] += velocity[i] * dt;
+  }
+}
+
 void next_frame(int x) {
   if (x == 0) {
-    for (int i = 0; i < HEIGHT; i++) {
-      shift[i] = 0;
+    for (int i = 0; i < LENGTH; i++) {
+      position[i] = 0;
       velocity[i] = 0;
     }
   }
 
-  shift[0] = (((int) (x/SQUARE_WAVE_PERIOD)) % 2) * SQUARE_WAVE_AMPLITUDE;
-  for (int i = 1; i < HEIGHT; i++) {
-    velocity[i] += SPRING_CONSTANT * (shift[i-1] - shift[i]);
+  float duty_phase = x % (DUTY_CYCLE_ON + DUTY_CYCLE_OFF);
+  if (duty_phase < DUTY_CYCLE_ON) {
+    position[0] = sin(2*M_PI*(duty_phase/SINE_WAVE_PERIOD))*SINE_WAVE_AMPLITUDE;
   }
-  for (int i = 1; i < HEIGHT; i++) {
-    velocity[i] *= (1 - FRICTION);
+  for (int t = 0; t < TICKS_PER_FRAME; t++) {
+    tick(1.0/FPS/TICKS_PER_FRAME);
   }
-  for (int i = 1; i < HEIGHT; i++) {
-    shift[i] += velocity[i];
-  }
-  for (int i = 0; i < HEIGHT; i++) {
+
+  for (int i = 0; i < LENGTH; i++) {
     for (int j = 0; j < CIRCUMFERENCE; j++) {
-      set_hue(i, j, shift[i] + (float) j / CIRCUMFERENCE);
+      set_hue(i, j, position[i] + (float) j / CIRCUMFERENCE);
     }
   }
 
