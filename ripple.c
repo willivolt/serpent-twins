@@ -22,7 +22,7 @@ void next_frame(int frame) {
   int rmax;
   int pixnum;
 
-  if(frame%16==0) {
+  if(frame%22==0) {
     red[nnext]=rand()%100+56;
     green[nnext]=rand()%100+56;
     blue[nnext]=rand()%100+56;
@@ -40,9 +40,9 @@ void next_frame(int frame) {
 
   for(i=0;i<nmax;i++) {
     radius[i]+=1;
-    red[i]=red[i]*19/20;
-    green[i]=green[i]*19/20;
-    blue[i]=blue[i]*19/20;
+    red[i]=red[i]*49/50;
+    green[i]=green[i]*49/50;
+    blue[i]=blue[i]*49/50;
 
   }
 

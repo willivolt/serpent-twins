@@ -73,6 +73,8 @@ double blur[BLUR_WIDTH][BLUR_WIDTH];
 // Animation parameters
 double start_time;
 double next_frame_time;
+int frame = 0, paused = 0;
+
 #define FPS 20;
 
 
@@ -275,6 +277,9 @@ void keyboard(unsigned char key, int x, int y) {
     printf("\n");
     exit(0);
   }
+  if (key == ' ') {
+    paused = !paused;
+  }
 }
 
 void update_render_grid() {
@@ -314,18 +319,18 @@ double get_time() {
   return now.tv_sec + 1e-6*now.tv_usec;
 }
 
-int frame = 0;
-
 void idle(void) {
-  double now = get_time();
-  if (now >= next_frame_time) {
-    next_frame(frame);
-    update_render_grid();
-    display();
-    next_frame_time += 1.0/FPS;
-    frame++;
-    printf("frame %d (%.1f fps)\r", frame, frame/(now - start_time));
-    fflush(stdout);
+  if (!paused) {
+    double now = get_time();
+    if (now >= next_frame_time) {
+      next_frame(frame);
+      update_render_grid();
+      display();
+      next_frame_time += 1.0/FPS;
+      frame++;
+      printf("frame %d (%.1f fps)\r", frame, frame/(now - start_time));
+      fflush(stdout);
+    }
   }
 }
 
