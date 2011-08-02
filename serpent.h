@@ -1,12 +1,15 @@
-#define red(pixels, index) (pixels)[(index)*3]
-#define green(pixels, index) (pixels)[(index)*3 + 1]
-#define blue(pixels, index) (pixels)[(index)*3 + 2]
+#ifndef M_PI
+#define M_PI 3.1415926535897932384626433832795
+#endif
+
+typedef unsigned char byte;
+
 #define set_rgb(pixels, index, r, g, b) { \
-  unsigned char* p = pixels + (index)*3; \
+  byte* p = pixels + (index)*3; \
   *(p++) = r; \
   *(p++) = g; \
   *(p++) = b; \
 }
 
-void put_pixels(int segment, unsigned char* pixels, int n);
+void put_pixels(int segment, byte* pixels, int n);
 void next_frame(int frame);

@@ -1,9 +1,16 @@
 #!/bin/bash
 
 CC=gcc
-COPTS="-framework OpenGL -framework GLUT -std=c99"
+if [ $(uname) == "Darwin" ]; then
+  COPTS="-framework OpenGL -framework GLUT -std=c99"
+else
+  COPTS="-std=c99 -lGL -lGLU -lglut -lm"
+fi
 
 name=${1%%.c}
 if [ ! -d build ]; then mkdir build; fi
 
-$CC $COPTS serpent.c $name.c -o build/$name && build/$name
+echo $CC $COPTS serpent.c $name.c -o build/$name && \
+    $CC $COPTS serpent.c $name.c -o build/$name && \
+    echo build/$name && \
+    build/$name
