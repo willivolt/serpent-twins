@@ -4,16 +4,16 @@
 #define CIRCUMFERENCE 25
 #define LENGTH 120
 #define PIXELS_PER_SEGMENT (CIRCUMFERENCE*LENGTH/10)
-#define SINE_WAVE_AMPLITUDE 0.8
-#define SINE_WAVE_PERIOD 80
+#define SINE_WAVE_AMPLITUDE 0.9
+#define SINE_WAVE_PERIOD 40
 #define DUTY_CYCLE_ON 120
-#define DUTY_CYCLE_OFF 200
+#define DUTY_CYCLE_OFF 120
 
 #define TICKS_PER_FRAME 10 
 #define FPS 20
-#define SPRING_CONSTANT 3000  // kg/s^2
+#define SPRING_CONSTANT 400  // kg/s^2
 #define MASS 0.1  // kg
-#define FRICTION_FORCE 0.05  // kg*rev^2/s
+#define FRICTION_FORCE 0.02  // kg*rev^2/s
 #define FRICTION_MIN_VELOCITY 0.01  // rev/s
 
 unsigned char pixels[CIRCUMFERENCE*LENGTH*3];
