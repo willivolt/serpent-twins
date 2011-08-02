@@ -1,5 +1,7 @@
 #include <math.h>
 #include "serpent.h"
+#include "spectrum-palette.h"
+#define PALETTE_SIZE 800
 
 #define CIRCUMFERENCE 25
 #define LENGTH 120
@@ -21,8 +23,10 @@ float position[LENGTH];  // rev
 float velocity[LENGTH];  // rev/s
 
 void set_hue(int row, int angle, float hue) {
+  hue -= floor(hue);
+
   unsigned char r = 0, g = 0, b = 0;
-  int k = (hue - floor(hue)) * 255 * 3;
+  int k = hue * 255 * 3;
   if (k < 255) {
     r = 255 - k;
     g = k;
@@ -34,9 +38,12 @@ void set_hue(int row, int angle, float hue) {
     r = k - 510;
   }
 
+  int e = hue*PALETTE_SIZE;
+  r = SPECTRUM_PALETTE[e*3]; g = SPECTRUM_PALETTE[e*3 + 1]; b = SPECTRUM_PALETTE[e*3 + 2];
+
   int index = (row * CIRCUMFERENCE) +
       ((row % 2) ? angle : CIRCUMFERENCE - 1 - angle);
-  set_rgb(pixels, index, r ? r : 1, g ? g : 1, b ? b : 1);
+  set_rgb(pixels, index, r, g, b);
 }
 
 void tick(float dt) {

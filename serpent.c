@@ -67,7 +67,7 @@ colour render_grids[NUM_SEGS][(SEG_NK + 1)*SEG_NA];
 #define BLUR_Z 1.5 // depth of LED under surface, in render units
 #define BLUR_RADIUS 10
 #define BLUR_WIDTH (BLUR_RADIUS*2 + 1)
-#define BLUR_BRIGHTNESS_SCALE 0.15
+#define BLUR_BRIGHTNESS_SCALE 0.2
 double blur[BLUR_WIDTH][BLUR_WIDTH];
 
 // Animation parameters

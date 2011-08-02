@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "serpent.h"
 #include "sunset-palette.h"
+#include "sunset-palette-2.h"
+#include "spectrum-palette.h"
 
 #define NUM_SEGMENTS 10
 #define LENGTH 120
@@ -49,9 +51,9 @@ void tick(float dt) {
 
 int drop_x, drop_y, last_on = 0;
 float drop_impulse = 2000/MASS;
-#define ENV_MAP_SIZE 700
+#define ENV_MAP_SIZE 800
 unsigned char env_map[2100];
-#define ENV_MAP SUNSET_PALETTE
+#define ENV_MAP SUNSET_PALETTE_2
 
 void next_frame(int f) {
   float t = (float) f / FPS;
@@ -99,10 +101,11 @@ void next_frame(int f) {
   }
   for (int i = 0; i < LENGTH; i++) {
     for (int j = 0; j < CIRC; j++) {
-      int e = (position[i][j]-position[i+1][j])*200 + ENV_MAP_SIZE/2;
+      int e = (position[i][j]-position[i+1][j])*300 + ENV_MAP_SIZE/2;
       e = (e < 0) ? 0 : (e > ENV_MAP_SIZE - 1) ? ENV_MAP_SIZE - 1 : e;
       unsigned char* ep = ENV_MAP + e*3;
-      set_rgb(pixels, i*CIRC + ((i % 2) ? (CIRC-1-j) : j), ep[0], ep[1], ep[2]);
+      set_rgb(pixels, i*CIRC + ((i % 2) ? (CIRC-1-j) : j),
+              ep[0]*180/255, ep[1]*180/255, ep[2]*180/255);
     }
   }
   for (int s = 0; s < NUM_SEGMENTS; s++) {
