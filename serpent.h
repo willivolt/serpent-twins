@@ -2,7 +2,7 @@
 #define green(pixels, index) (pixels)[(index)*3 + 1]
 #define blue(pixels, index) (pixels)[(index)*3 + 2]
 #define set_rgb(pixels, index, r, g, b) { \
-  unsigned char* p = pixels + index*3; \
+  unsigned char* p = pixels + (index)*3; \
   *(p++) = r; \
   *(p++) = g; \
   *(p++) = b; \
