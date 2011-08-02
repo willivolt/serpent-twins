@@ -3,6 +3,9 @@
 #include <sys/time.h>
 #include <math.h>
 #ifdef __APPLE__
+#include <OpenGL/CGLCurrent.h>
+#include <OpenGL/CGLTypes.h>
+#include <OpenGL/OpenGL.h>
 #include <GLUT/glut.h>
 #else
 #include <GL/glut.h>
@@ -330,6 +333,13 @@ void init(void) {
   /* Use depth buffering for hidden surface elimination. */
   glEnable(GL_DEPTH_TEST);
   glShadeModel(GL_SMOOTH);
+  
+  /* Make glutSwapBuffers wait for vertical refresh to avoid frame tearing. */
+#ifdef __APPLE__
+  int swap_interval = 1;
+  CGLContextObj context = CGLGetCurrentContext();
+  CGLSetParameter(context, kCGLCPSwapInterval, &swap_interval);
+#endif
 
   /* Set up the blur convolution matrix. */
   for (int x = 0; x < BLUR_WIDTH; x++) {
