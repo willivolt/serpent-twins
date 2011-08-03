@@ -11,9 +11,11 @@
 
 typedef unsigned char byte;
 
+// find the index of a pixel
 #define pixel_index(row, col) \
    ((row)*NUM_COLUMNS + (((row) % 2) ? (NUM_COLUMNS - 1 - (col)) : (col)))
 
+// sets the colour of a single pixel
 #define set_rgb(pixels, index, r, g, b) { \
   byte* __p = (pixels) + (index)*3; \
   *(__p++) = r; \
@@ -21,8 +23,10 @@ typedef unsigned char byte;
   *(__p++) = b; \
 }
 
+// maps f (a float from 0.0 to 1.0) to a colour in a given palette
 #define palette_index(palette, f) ((int) (((f) - floor(f))*palette##_SIZE))
 
+// sets the colour of a pixel from a palette
 #define set_from_palette(pixels, pixel_index, palette, f) { \
   byte* __s = (palette) + palette_index(palette, f)*3; \
   byte* __d = (pixels) + (pixel_index)*3; \
