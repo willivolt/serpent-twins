@@ -1,11 +1,9 @@
 #include <math.h>
 #include "serpent.h"
-#include "spectrum-palette.h"
-#define PALETTE_SIZE 800
+#include "spectrum.pal"
+#include "sunset.pal"
+#define PALETTE SPECTRUM_PALETTE
 
-#define CIRCUMFERENCE 25
-#define LENGTH 120
-#define PIXELS_PER_SEGMENT (CIRCUMFERENCE*LENGTH/10)
 #define SINE_WAVE_AMPLITUDE 0.9
 #define SINE_WAVE_PERIOD 40
 #define DUTY_CYCLE_ON 120
@@ -18,38 +16,18 @@
 #define FRICTION_FORCE 0.02  // kg*rev^2/s
 #define FRICTION_MIN_VELOCITY 0.01  // rev/s
 
-unsigned char pixels[CIRCUMFERENCE*LENGTH*3];
-float position[LENGTH];  // rev
-float velocity[LENGTH];  // rev/s
+unsigned char pixels[NUM_PIXELS*3];
+float position[NUM_ROWS];  // rev
+float velocity[NUM_ROWS];  // rev/s
 
-void set_hue(int row, int angle, float hue) {
-  hue -= floor(hue);
-
-  unsigned char r = 0, g = 0, b = 0;
-  int k = hue * 255 * 3;
-  if (k < 255) {
-    r = 255 - k;
-    g = k;
-  } else if (k < 510) {
-    g = 255 - (k - 255);
-    b = k - 255;
-  } else {
-    b = 255 - (k - 510);
-    r = k - 510;
-  }
-
-  int e = hue*PALETTE_SIZE;
-  r = SPECTRUM_PALETTE[e*3]; g = SPECTRUM_PALETTE[e*3 + 1]; b = SPECTRUM_PALETTE[e*3 + 2];
-
-  int index = (row * CIRCUMFERENCE) +
-      ((row % 2) ? angle : CIRCUMFERENCE - 1 - angle);
-  set_rgb(pixels, index, r, g, b);
+void set_hue(int row, int col, float hue) {
+  set_from_palette(pixels, pixel_index(row, col), PALETTE, hue - floor(hue));
 }
 
 void tick(float dt) {
-  for (int i = 1; i < LENGTH; i++) {
+  for (int i = 1; i < NUM_ROWS; i++) {
     float force = SPRING_CONSTANT * (position[i-1] - position[i]);
-    if (i < LENGTH - 1) {
+    if (i < NUM_ROWS - 1) {
       force += SPRING_CONSTANT * (position[i+1] - position[i]);
     }
     if (velocity[i] > FRICTION_MIN_VELOCITY) {
@@ -59,14 +37,14 @@ void tick(float dt) {
     }
     velocity[i] += force/MASS * dt;
   }
-  for (int i = 1; i < LENGTH; i++) {
+  for (int i = 1; i < NUM_ROWS; i++) {
     position[i] += velocity[i] * dt;
   }
 }
 
 void next_frame(int x) {
   if (x == 0) {
-    for (int i = 0; i < LENGTH; i++) {
+    for (int i = 0; i < NUM_ROWS; i++) {
       position[i] = 0;
       velocity[i] = 0;
     }
@@ -80,13 +58,13 @@ void next_frame(int x) {
     tick(1.0/FPS/TICKS_PER_FRAME);
   }
 
-  for (int i = 0; i < LENGTH; i++) {
-    for (int j = 0; j < CIRCUMFERENCE; j++) {
-      set_hue(i, j, position[i] + (float) j / CIRCUMFERENCE);
+  for (int i = 0; i < NUM_ROWS; i++) {
+    for (int j = 0; j < NUM_COLUMNS; j++) {
+      set_hue(i, j, position[i] + (float) j / NUM_COLUMNS);
     }
   }
 
   for (int s = 0; s < 10; s++) {
-    put_pixels(s, pixels + s*PIXELS_PER_SEGMENT*3, PIXELS_PER_SEGMENT);
+    put_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
   }
 }

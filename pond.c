@@ -1,9 +1,8 @@
 #include <math.h>
 #include <stdlib.h>
 #include "serpent.h"
-#include "sunset-palette.h"
-#include "sunset-palette-2.h"
-#include "spectrum-palette.h"
+#include "sunset.pal"
+#include "spectrum.pal"
 
 #define NUM_SEGMENTS 10
 #define LENGTH 120
@@ -53,7 +52,7 @@ int drop_x, drop_y, last_on = 0;
 float drop_impulse = 2000/MASS;
 #define ENV_MAP_SIZE 800
 unsigned char env_map[2100];
-#define ENV_MAP SUNSET_PALETTE_2
+#define ENV_MAP SUNSET_PALETTE
 
 void next_frame(int f) {
   float t = (float) f / FPS;

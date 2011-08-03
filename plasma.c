@@ -1,7 +1,7 @@
 #include "serpent.h"
 #include <math.h>
-#include "spectrum-palette.h"
-#include "sunset-palette.h" 
+#include "spectrum.pal"
+#include "sunset.pal" 
 #define PALETTE SPECTRUM_PALETTE
 
 float sin_table[256];
