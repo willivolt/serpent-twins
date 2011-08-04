@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <math.h>
 #ifndef M_PI
 #define M_PI 3.1415926535897932384626433832795
 #endif
@@ -25,7 +26,7 @@
 
 typedef unsigned char byte;
 
-// find the index of a pixel
+// finds the index of a pixel
 #define pixel_index(row, col) \
    ((row)*NUM_COLUMNS + (((row) % 2) ? (NUM_COLUMNS - 1 - (col)) : (col)))
 
