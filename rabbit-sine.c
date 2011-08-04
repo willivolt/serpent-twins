@@ -2,7 +2,7 @@
 #include "serpent.h"
 
 // this scales the brightness of all the pixels.  255 is default
-#define MAX_BRIGHT 200
+#define MAX_BRIGHT 255
 
 #define NSEGS 10
 #define AROUND 25
