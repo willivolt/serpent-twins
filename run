@@ -17,6 +17,9 @@
 CC=gcc
 if [ $(uname) == "Darwin" ]; then
   COPTS="-framework OpenGL -framework GLUT -std=c99"
+elif [[ $(uname) == *CYGWIN* ]]; then
+  COPTS="-std=c99 -lopengl32 -lglu32 -lglut32 -lm -D_STDCALL_SUPPORTED -Xlinker --enable-stdcall-fixup \
+       $SYSTEMROOT/System32/glu32.dll /bin/glut32.dll $SYSTEMROOT/System32/opengl32.dll"
 else
   COPTS="-std=c99 -lGL -lGLU -lglut -lm"
 fi
