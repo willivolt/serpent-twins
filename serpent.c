@@ -57,9 +57,9 @@ vector temp_vector;
 int orbiting = 0, dollying = 0;
 double start_angle, start_elevation, start_distance;
 int start_x, start_y;
-double orbit_angle = 200.0; // camera orbit angle, degrees
+double orbit_angle = 174.0; // camera orbit angle, degrees
 double camera_elevation = 30; // camera elevation angle, degrees
-double camera_distance = 25.0; // metres
+double camera_distance = 11.0; // metres
 double camera_aspect = 1.0;
 
 // LED colours
@@ -406,7 +406,7 @@ int main(int argc, char **argv) {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutCreateWindow("Serpent");
-  glutReshapeWindow(1024, 768);
+  glutReshapeWindow(1000, 360);
   glutReshapeFunc(reshape);
   glutDisplayFunc(display);
   glutMouseFunc(mouse);
