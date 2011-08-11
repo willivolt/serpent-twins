@@ -1,4 +1,4 @@
-// "pond", by David Rabbit Wallace
+// "rabbit-sine", by David Rabbit Wallace
 
 // Copyright 2011 David Rabbit Wallace
 // 
