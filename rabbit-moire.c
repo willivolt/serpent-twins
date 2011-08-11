@@ -37,9 +37,9 @@ void next_frame(int frame) {
     int seg;         // which trailer?
 
     // scalar field values
-    int spin1;
-    int spin2;
-    int spin3;
+    int spin1 = 0;
+    int spin2 = 0;
+    int spin3 = 0;
 
     int thickness1 = 2;
     int thickness2 = 2;
@@ -48,14 +48,7 @@ void next_frame(int frame) {
     float twist2 = 0.04;
     float twist3 = 0.03;
 
-    // movement and look
-    float wavelength_small = 12.0;
-    float wavelength_large = 64.0;
-    float time_offset_small = -frame*0.5;  // larger number == faster movement
-    float time_offset_large = frame*0.9;
-    float black_stripe_width = 0.8; // width of black stripe between colors
 
-    spin1 = spin2 = spin3 = 0;
 
     for (int i = 0; i < 300*NSEGS; i++) {
         //-------------------------------------------
