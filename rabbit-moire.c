@@ -20,6 +20,8 @@
 // this scales the brightness of all the pixels.  255 is default
 #define MAX_BRIGHT 255
 
+#define BARREL_OFFSET 0
+
 #define NSEGS 10
 #define AROUND 25
 #define LONG 12
@@ -46,15 +48,15 @@ void next_frame(int frame) {
     int thickness3 = 2;
     float twist1 = 0.05;
     float twist2 = 0.04;
-    float twist3 = 0.03;
+    float twist3 = -0.03;
 
 
 
     for (int i = 0; i < 300*NSEGS; i++) {
         //-------------------------------------------
         // RADIAL COORDINATES
-        x = (i % AROUND);  // theta.  0 to 24
-        y = (i / AROUND);  // along cylinder.  0 to NSEGS*LONG (120)
+        x = ((i+AROUND*LONG*BARREL_OFFSET) % AROUND);  // theta.  0 to 24
+        y = ((i+AROUND*LONG*BARREL_OFFSET) / AROUND);  // along cylinder.  0 to NSEGS*LONG (120)
         seg = y / LONG;
         // reverse every other row
         if (y % 2 == 1) {
@@ -78,10 +80,9 @@ void next_frame(int frame) {
             }
 
             // brighter in the middle
-            thickness1 = y / 20 + 1;
-            thickness2 = y / 20 + 1;
-            thickness2 = 4 - thickness2;
-            thickness3 = y / 20 + 1;
+            thickness1 = (-y+NSEGS*LONG/2) / 20 + 1;    // red/blue
+            thickness2 = y / 25 + 1;      // yellow
+            thickness3 = 2; //y / 20 + 1;
         }
 
         //-------------------------------------------
@@ -89,26 +90,29 @@ void next_frame(int frame) {
 
         r = g = b = 0;
 
+        // - - - - - - - - - - - - - - - -
+        // red and blue
         if (x == 0) {
             spin1 = y * frame * twist1 - frame;
             spin1 = spin1 % AROUND;
             if (spin1 < 0) { spin1 += AROUND; }
         }
         if ((abs(spin1 - x) < thickness1) || (abs( (spin1+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness1)) {
-            r += 255;
-        }
-        spin1 = (spin1 + 2) % AROUND;
-        if ((abs(spin1 - x) < thickness1) || (abs( (spin1+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness1)) {
-            g += 55;
+            r += 155;
         }
         spin1 = (spin1 + 2) % AROUND;
         if ((abs(spin1 - x) < thickness1) || (abs( (spin1+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness1)) {
             b += 255;
         }
+        spin1 = (spin1 + 2) % AROUND;
+        if ((abs(spin1 - x) < thickness1) || (abs( (spin1+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness1)) {
+        //    b += 255;
+        }
         spin1 = (spin1 - 4) % AROUND;
 
 
-
+        // - - - - - - - - - - - - - - - -
+        // yellow
         if (x == 0) {
             spin2 = y * frame * twist2 - frame;
             spin2 = spin2 % AROUND;
@@ -128,27 +132,32 @@ void next_frame(int frame) {
         spin2 = (spin2 - 4) % AROUND;
 
 
-/*
+        // - - - - - - - - - - - - - - - -
+        // grid
         if (x == 0) {
-            spin3 = y * frame * twist3 - frame;
+            spin3 = y * frame * twist3 + frame;
             spin3 = spin3 % AROUND;
             if (spin3 < 0) { spin3 += AROUND; }
         }
-        if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
-            r += 0;
-            g += 255;
-            b += 155;
+        if (y%6 == 0) {   // vert lines
+        //if (x%6 == 0) {   // horiz lines
+        //if ((x%6 == 0) || (y%6 == 0)) {  // grid
+            if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
+                r += 255;
+                g += 255;
+                b += 255;
+            }
         }
-        //spin3 = (spin3 + 2) % AROUND;
+        //spin3 = (spin3 + 1) % AROUND;
         //if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
-        //    g += 55;
+        //    g += 255;
         //}
-        //spin3 = (spin3 + 2) % AROUND;
+        //spin3 = (spin3 + 1) % AROUND;
         //if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
-        //    b += 55;
+        //    b += 255;
         //}
-        //spin3 = (spin3 - 4) % AROUND;
-*/
+        //spin3 = (spin3 - 2) % AROUND;
+
 
         //-------------------------------------------
         // STORE RESULT

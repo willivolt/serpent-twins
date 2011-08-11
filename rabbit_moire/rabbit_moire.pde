@@ -68,12 +68,16 @@ void send_frame(byte flag, byte red, byte green, byte blue) {
 // this scales the brightness of all the pixels.  255 is default
 #define MAX_BRIGHT 255
 
-#define BARREL_OFFSET 1
+#define BARREL_OFFSET 4
 
 #define NSEGS 1
 #define AROUND 25
 #define LONG 12
 unsigned char pixels[3*AROUND*LONG*NSEGS];
+
+
+#define PI 3.14159
+#define TWOPI (2*3.14159)
 
 
 void next_frame(int frame) {
@@ -94,7 +98,7 @@ void next_frame(int frame) {
     int thickness3 = 2;
     float twist1 = 0.05;
     float twist2 = 0.04;
-    float twist3 = 0.03;
+    float twist3 = -0.03;
 
 
     for (int i = 0; i < 300*NSEGS; i++) {
@@ -120,15 +124,17 @@ void next_frame(int frame) {
 
         if (x == 0) {
             // mirror y around middle of serpent
-            if (y > NSEGS*LONG/2) {
-                y = -y + NSEGS*LONG;
+            if (y > 10*LONG/2) {
+                y = -y + 10*LONG;
             }
 
             // brighter in the middle
-            thickness1 = y / 20 + 1;
-            thickness2 = y / 20 + 1;
-            thickness2 = 4 - thickness2;
-            thickness3 = y / 20 + 1;
+            thickness1 = y / 10 + 1;
+            thickness1 = 5 - thickness1;  // red/blue
+            thickness2 = y / 25 + 1;      // yellow
+            thickness3 = 3; //y / 20 + 1;
+
+
         }
 
 
@@ -141,6 +147,7 @@ void next_frame(int frame) {
 
         r = g = b = 0;
 
+/*
         if (x == 0) {
             spin1 = y * frame * twist1 - frame;
             spin1 = spin1 % AROUND;
@@ -160,7 +167,7 @@ void next_frame(int frame) {
         spin1 = (spin1 - 4) % AROUND;
 
 
-
+*/
 
         if (x == 0) {
             spin2 = y * frame * twist2 - frame;
@@ -181,28 +188,20 @@ void next_frame(int frame) {
         spin2 = (spin2 - 4) % AROUND;
 
 
-/*
+
+
         if (x == 0) {
-            spin3 = y * frame * twist3 - frame;
+            spin3 = y * frame * twist3 + frame;
             spin3 = spin3 % AROUND;
             if (spin3 < 0) { spin3 += AROUND; }
         }
-        if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
-            r += 0;
-            g += 255;
-            b += 155;
+        if ((x%6 == 0) || (y%6 == 0)) {
+            if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
+                r += 255;
+                g += 255;
+                b += 255;
+            }
         }
-        //spin3 = (spin3 + 2) % AROUND;
-        //if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
-        //    g += 55;
-        //}
-        //spin3 = (spin3 + 2) % AROUND;
-        //if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
-        //    b += 55;
-        //}
-        //spin3 = (spin3 - 4) % AROUND;
-*/
-
 
 
 
