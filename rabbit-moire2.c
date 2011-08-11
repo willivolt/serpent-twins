@@ -20,7 +20,7 @@
 // this scales the brightness of all the pixels.  255 is default
 #define MAX_BRIGHT 255
 
-#define BARREL_OFFSET 0
+#define BARREL_OFFSET -1 
 
 #define NSEGS 10
 #define AROUND 25
@@ -111,6 +111,37 @@ void next_frame(int frame) {
         spin1 = (spin1 - 4) % AROUND;
 
 
+        //-------------------------------------------
+        // RADIAL COORDINATES
+        x = ((i+AROUND*LONG*1) % AROUND);  // theta.  0 to 24
+        y = ((i+AROUND*LONG*1) / AROUND);  // along cylinder.  0 to NSEGS*LONG (120)
+        seg = y / LONG;
+        // reverse every other row
+        if (y % 2 == 1) {
+            x = (AROUND-1)-x;
+        }
+
+        // rotate 90 degrees to one side
+        //x = (x + AROUND/4) % AROUND;
+
+        // twist like a candy cane
+        //x = (x + y*0.6);
+        //x = x % AROUND;
+
+        // spin like a rolling log
+        //x = (x + frame) % AROUND;
+
+        if (x == 0) {
+            // mirror y around middle of serpent
+            if (y > NSEGS*LONG/2) {
+                y = -y + NSEGS*LONG;
+            }
+
+            // brighter in the middle
+            thickness1 = (-y+NSEGS*LONG/2) / 20 + 1;    // red/blue
+            thickness2 = y / 25 + 1;      // yellow
+            thickness3 = 2; //y / 20 + 1;
+        }
         // - - - - - - - - - - - - - - - -
         // yellow
         if (x == 0) {
