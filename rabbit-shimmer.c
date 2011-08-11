@@ -89,7 +89,7 @@ void next_frame(int frame) {
         // SPIN AND COLORS
 
         r = g = b = 0;
-
+/*
         // - - - - - - - - - - - - - - - -
         // red and blue
         if (x == 0) {
@@ -130,7 +130,7 @@ void next_frame(int frame) {
             b += 55;
         }
         spin2 = (spin2 - 4) % AROUND;
-
+*/
 
         // - - - - - - - - - - - - - - - -
         // grid
@@ -139,24 +139,28 @@ void next_frame(int frame) {
             spin3 = spin3 % AROUND;
             if (spin3 < 0) { spin3 += AROUND; }
         }
-        if (y%6 == 0) {   // vert lines
+        //if (y%6 == 0) {   // vert lines
         //if (x%6 == 0) {   // horiz lines
-        //if ((x%6 == 0) || (y%6 == 0)) {  // grid
+        if ((x%6 == frame%6) || (y%6 == frame%6)) {  // grid
             if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
                 r += 255;
-                g += 255;
-                b += 255;
+                g += 155;
             }
         }
-        //spin3 = (spin3 + 1) % AROUND;
-        //if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
-        //    g += 255;
+        spin3 = (spin3 + 1) % AROUND;
+        if ((x%6 == frame%6) || (y%6 == frame%6)) {  // grid
+            if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
+                g += 255;
+                b += 155;
+            }
+        }
+        spin3 = (spin3 + 1) % AROUND;
+        //if ((x%6 == frame%6) || (y%6 == frame%6)) {  // grid
+        //    if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
+        //        b += 255;
+        //    }
         //}
-        //spin3 = (spin3 + 1) % AROUND;
-        //if ((abs(spin3 - x) < thickness3) || (abs( (spin3+AROUND/2)%AROUND - (x+AROUND/2)%AROUND ) < thickness3)) {
-        //    b += 255;
-        //}
-        //spin3 = (spin3 - 2) % AROUND;
+        spin3 = (spin3 - 2) % AROUND;
 
 
         //-------------------------------------------
