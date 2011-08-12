@@ -22,17 +22,17 @@
 byte pixels[NUM_ROWS*NUM_COLUMNS*3];
 
 void next_frame(int f) {
-    float t = -f*REV/100;
+    float t = -f*REV/40;
     for (int r = 0; r < NUM_ROWS; r++) {
         float u = r/5.0;
         float v = r/20.0;
-        float w = sin(u*REV + sin(v + t)*16);
+        float w = sin(u*REV + sin(v + t)*12);
         float p = (pow(2, pow(2, w)) - 1.0)/3.0;
         p = (0.5 + p*0.4);
         int red = 127;
         int green = p*255;
         int blue = 127;
-        if (p < 0.3) { red = green = 0; }
+        if (p < 0.6) { red = green = 0; p = 0;}
         for (int c = 0; c < NUM_COLUMNS; c++) {
             set_rgb(pixels, pixel_index(r, c), red, green, blue);
             set_from_palette(pixels, pixel_index(r, c), SPECTRUM_PALETTE, p);
