@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Run an animation on the OpenGL simulator.
+
 CC=gcc
 if [ $(uname) == "Darwin" ]; then
   COPTS="-std=c99 -O2 -framework OpenGL -framework GLUT"
