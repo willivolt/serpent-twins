@@ -24,7 +24,10 @@
 #define SEG_PIXELS (SEG_ROWS*NUM_COLUMNS) // number of pixels in one segment
 #define NUM_PIXELS (NUM_SEGS*SEG_PIXELS) // number of pixels in entire serpent
 
+#ifndef TYPEDEF_BYTE
+#define TYPEDEF_BYTE
 typedef unsigned char byte;
+#endif
 
 // finds the index of a pixel
 #define pixel_index(row, col) \

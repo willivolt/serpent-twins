@@ -28,6 +28,10 @@ unsigned char pixels[3*AROUND*LONG*NSEGS];
 #define PI 3.14159
 #define TWOPI (2*3.14159)
 
+#define SIN(n) sin_table[((int) (n)) & 0xff]
+#define COS(n) sin_table[((int) (n) + 0x40) & 0xff]
+float sin_table[256];
+
 void next_frame(int frame) {
     int r,g,b,temp;
 
@@ -47,6 +51,12 @@ void next_frame(int frame) {
     float time_offset_small = -frame*0.5;  // larger number == faster movement
     float time_offset_large = frame*0.9;
     float black_stripe_width = 0.8; // width of black stripe between colors
+    
+    if (frame == 0) {
+        for (int i = 0; i < 256; i++) {
+            sin_table[i] = sin(i/256.0*TWOPI);
+        }
+    }
 
 
     for (int i = 0; i < 300*NSEGS; i++) {
@@ -72,14 +82,17 @@ void next_frame(int frame) {
 
         //-------------------------------------------
         // ALTITUDE
-        alt = -cos(   x/(AROUND-1.0) * TWOPI   );
+//        alt = -cos(   x/(AROUND-1.0) * TWOPI   );
+        alt = -COS(   x/(AROUND-1.0) * 256   );
 
         //-------------------------------------------
         // BRIGHTNESS
 
         // combine two sine waves along the length of the snake with the altitude at each point
-        sin_small = sin(   (time_offset_small + y) / wavelength_small * TWOPI   );
-        sin_large = sin(   (time_offset_large + y) / wavelength_large * TWOPI   );
+        sin_small = SIN(   (time_offset_small + y) / wavelength_small * 256   );
+        sin_large = SIN(   (time_offset_large + y) / wavelength_large * 256   );
+//        sin_small = sin(   (time_offset_small + y) / wavelength_small * TWOPI   );
+//        sin_large = sin(   (time_offset_large + y) / wavelength_large * TWOPI   );
         bright = (sin_small*0.5 + sin_large*0.7)*0.7 + alt*0.5;
 
         // increase contrast and invert
