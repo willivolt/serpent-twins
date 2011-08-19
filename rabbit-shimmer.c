@@ -48,7 +48,7 @@ void next_frame(int frame) {
     int thickness3 = 2;
     float twist1 = 0.05;
     float twist2 = 0.04;
-    float twist3 = -0.03;
+    float twist3 = -0.025;
 
 
 
