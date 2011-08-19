@@ -29,7 +29,7 @@
 #define FPS 10
 #define TICKS_PER_FRAME 10
 #define DUTY_CYCLE_ON 1.0
-#define DUTY_CYCLE_PERIOD 3.0
+#define DUTY_CYCLE_PERIOD 10.0
 
 unsigned char pixels[LENGTH*CIRC*3];
 float position[LENGTH][CIRC];
@@ -48,6 +48,7 @@ void tick(float dt) {
       if (i < LENGTH - 1) {
         delta += (position[i + 1][j] - position[i][j]);
       }
+      delta += -position[i][j]*0.02;
       float force = SPRING_CONSTANT * delta;
       if (velocity[i][j] > FRICTION_MIN_VELOCITY) {
         force -= FRICTION_FORCE;

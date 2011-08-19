@@ -14,14 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Run an animation on the OpenGL simulator.
+
 CC=gcc
 if [ $(uname) == "Darwin" ]; then
-  COPTS="-framework OpenGL -framework GLUT -std=c99"
+  COPTS="-std=c99 -O2 -framework OpenGL -framework GLUT"
 elif [[ $(uname) == *CYGWIN* ]]; then
-  COPTS="-std=c99 -lopengl32 -lglu32 -lglut32 -lm -D_STDCALL_SUPPORTED -Xlinker --enable-stdcall-fixup \
+  COPTS="-std=c99 -O2 -lopengl32 -lglu32 -lglut32 -lm -D_STDCALL_SUPPORTED -Xlinker --enable-stdcall-fixup \
        $SYSTEMROOT/System32/glu32.dll /bin/glut32.dll $SYSTEMROOT/System32/opengl32.dll"
 else
-  COPTS="-std=c99 -lGL -lGLU -lglut -lm"
+  COPTS="-std=c99 -O2 -lGL -lGLU -lglut -lm"
 fi
 
 name=${1%%.c}

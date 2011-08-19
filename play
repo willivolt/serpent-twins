@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Run an animation on the Chumby.
+
+CC=gcc
+COPTS="-std=c99 -lm -O2"
+
+name=${1%%.c}
+if [ ! -d build ]; then mkdir build; fi
+
+echo $CC $COPTS serpent_main.c total_control.c $name.c -o build/$name && \
+    $CC $COPTS serpent_main.c total_control.c $name.c -o build/$name && \
+    echo build/$name && \
+    build/$name
