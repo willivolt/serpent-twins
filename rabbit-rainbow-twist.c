@@ -1,5 +1,8 @@
 // "rabbit-rainbow-twist", by David Rabbit Wallace
 
+// Let this one run for a while; it takes about 2 minutes for
+// it to cycle through bright mode and dark mode.
+
 // Copyright 2011 David Rabbit Wallace
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
