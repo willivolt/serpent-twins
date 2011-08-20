@@ -21,8 +21,10 @@
 
 /*
  * Pinouts are:
- * D0 (header P200 pin 2) -> Total Control CLOCK
- * D1 (header P200 pin 4) -> Total Control DATA
+ * D0 (header P200 pin 2) -> Total Control CLOCK (green)
+ * D1 (header P200 pin 4) -> Total Control DATA (white)
+ * +5V (header P200 pin 1) -> Total Control +5V (red)
+ * GND (header P200 pin 7) -> Total Control GND (blue)
  */
 
 #include <stdio.h>
@@ -35,11 +37,11 @@
 
 #define PINCTRL_BASE (0x80018000)
 
-#define PINCTRL_MUXSEL0 (PINCTRL_BASE + 0x100)
-#define PINCTRL_DRIVE0 (PINCTRL_BASE + 0x200)
-#define PINCTRL_PULL0 (PINCTRL_BASE + 0x400)
-#define PINCTRL_DOUT0 (PINCTRL_BASE + 0x500)
-#define PINCTRL_DOE0 (PINCTRL_BASE + 0x700)
+#define PINCTRL_MUXSEL0 (PINCTRL_BASE + 0x100)  /* function select register */
+#define PINCTRL_DRIVE0 (PINCTRL_BASE + 0x200)  /* output current register */
+#define PINCTRL_PULL0 (PINCTRL_BASE + 0x400)  /* pull-up enable register */
+#define PINCTRL_DOUT0 (PINCTRL_BASE + 0x500)  /* data out register */
+#define PINCTRL_DOE0 (PINCTRL_BASE + 0x700)  /* output enable register */
 
 static unsigned int* pinctrl_mem = 0;
 
@@ -50,6 +52,16 @@ void pinctrl_write(unsigned int offset, unsigned int value) {
 
 #define PINCTRL_SET(address, value) pinctrl_write((address) + 4, value)
 #define PINCTRL_CLR(address, value) pinctrl_write((address) + 8, value)
+
+#define MAX_STRANDS 7
+
+byte ZEROES[MAX_STRANDS] = {0, 0, 0, 0, 0, 0, 0};
+unsigned int STRAND_ADDRESS[MAX_STRANDS] = {
+  PINCTRL_DOUT0, PINCTRL_DOUT0, PINCTRL_DOUT0, PINCTRL_DOUT0,
+  PINCTRL_DOUT0, PINCTRL_DOUT0, PINCTRL_DOUT0,
+};
+unsigned int STRAND_MASK[MAX_STRANDS] = {2, 4, 8, 16, 32, 64, 128};
+
 
 int gpio_init() {
   static int fd = 0;
@@ -64,7 +76,7 @@ int gpio_init() {
   pinctrl_mem = mmap(0, 0xffff, PROT_READ | PROT_WRITE, MAP_SHARED,
              fd, PINCTRL_BASE & ~0xffff);
 
-  // Set bank 0 pins 0-7 (D0-D7, aka GPMI_D00-GPMI_D07) to GPIO.
+  // Set pins D0 - D7 (bank 0 pins 0-7) to GPIO.  (2 bits = 0b11 for each pin.)
   PINCTRL_SET(PINCTRL_MUXSEL0, 0x0000ffff);
   
   // Initialize GPIO pins to 0.
@@ -94,6 +106,21 @@ void spi_write(byte value) {
   }
 }
 
+void spi_write_multi(byte* values, int num_strands) {
+  int i, j, bit;
+
+  for (i = 0, bit = 0x80; i < 8; i++, bit >>= 1) {
+    for (j = 0; j < num_strands; j++) {
+      if (values[j] & bit) {
+        PINCTRL_SET(STRAND_ADDRESS[j], STRAND_MASK[j]);
+      } else {
+        PINCTRL_CLR(STRAND_ADDRESS[j], STRAND_MASK[j]);
+      }
+    }
+    spi_clock_tick();
+  }
+}
+
 // Initialize Total Control Lighting.
 void tcl_init() {
   if (gpio_init() != 0) {
@@ -104,10 +131,18 @@ void tcl_init() {
 
 // Start a new pixel sequence.
 void tcl_start() { 
-  spi_write(0x00);
-  spi_write(0x00);
-  spi_write(0x00);
-  spi_write(0x00);
+  spi_write(0);
+  spi_write(0);
+  spi_write(0);
+  spi_write(0);
+}
+
+// Start a new pixel sequence on many strands at once.
+void tcl_start_multi(int num_strands) {
+  spi_write_multi(ZEROES, num_strands);
+  spi_write_multi(ZEROES, num_strands);
+  spi_write_multi(ZEROES, num_strands);
+  spi_write_multi(ZEROES, num_strands);
 }
 
 // Send a single pixel in a sequence.
@@ -119,6 +154,31 @@ void tcl_put_pixel(byte red, byte green, byte blue) {
   spi_write(red);
 }
 
+// Send multiple pixels in parallel to separate strands.
+void tcl_put_pixel_multi(byte** pixel_ptrs, int num_strands) {
+  int j;
+  byte flags[MAX_STRANDS];
+  byte reds[MAX_STRANDS];
+  byte greens[MAX_STRANDS];
+  byte blues[MAX_STRANDS];
+
+  if (num_strands > MAX_STRANDS) {
+    num_strands = MAX_STRANDS;
+  }
+  for (j = 0; j < num_strands; j++) {
+    reds[j] = pixel_ptrs[j][0];
+    greens[j] = pixel_ptrs[j][1];
+    blues[j] = pixel_ptrs[j][2];
+    flags[j] = ~((reds[j] & 0xc0) >> 6 |
+                 (greens[j] & 0xc0) >> 4 |
+                 (blues[j] & 0xc0) >> 2);
+  }
+  spi_write_multi(flags, num_strands);
+  spi_write_multi(blues, num_strands);
+  spi_write_multi(greens, num_strands);
+  spi_write_multi(reds, num_strands);
+}
+
 // Send an entire sequence of n pixels, given n*3 bytes of colour data.
 void tcl_put_pixels(byte* pixels, int n) {
   int i;
@@ -127,5 +187,25 @@ void tcl_put_pixels(byte* pixels, int n) {
   for (i = 0; i < n; i++) {
     tcl_put_pixel(pixels[0], pixels[1], pixels[2]);
     pixels += 3;
+  }
+}
+
+// Send multiple strands of pixels in parallel, n*3 bytes for each strand.
+void tcl_put_pixels_multi(byte** pixel_ptrs, int num_strands, int num_pixels) {
+  int i, j;
+  byte* ptrs[MAX_STRANDS];
+
+  if (num_strands > MAX_STRANDS) {
+    num_strands = MAX_STRANDS;
+  }
+  for (j = 0; j < num_strands; j++) {
+    ptrs[j] = pixel_ptrs[j];
+  }
+  tcl_start_multi(num_strands);
+  for (i = 0; i < num_pixels; i++) {
+    tcl_put_pixel_multi(ptrs, num_strands);
+    for (j = 0; j < num_strands; j++) {
+      ptrs[j] += 3;
+    }
   }
 }
