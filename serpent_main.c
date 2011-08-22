@@ -33,11 +33,6 @@ void put_pixels(int segment, byte* pixels, int n) {
   }
 }
 
-void emit_multi() {
-  tcl_put_pixels(strand_ptrs[0], longest_sequence);
-  // tcl_put_pixels_multi(strand_ptrs, NUM_SEGS, longest_sequence);
-}
-
 int get_milliseconds() {
   struct timeval tv;
   gettimeofday(&tv, NULL);
@@ -56,7 +51,7 @@ int main(int argc, char* argv[]) {
   while (1) {
     longest_sequence = 0;
     next_frame(f++);
-    emit_multi();
+    tcl_put_pixels_multi(strand_ptrs, NUM_SEGS, longest_sequence);
     next_frame_time += FRAME_MS;
     now = get_milliseconds();
     printf("frame %d (%.1f fps)\r", f, f*1000.0/(now - start_time));

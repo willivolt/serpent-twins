@@ -29,6 +29,11 @@
 typedef unsigned char byte;
 #endif
 
+#ifndef TYPEDEF_PIXEL
+#define TYPEDEF_PIXEL
+typedef struct { byte r, g, b; } pixel;
+#endif
+
 // finds the index of a pixel
 #define pixel_index(row, col) \
    ((row)*NUM_COLUMNS + (((row) % 2) ? (NUM_COLUMNS - 1 - (col)) : (col)))
