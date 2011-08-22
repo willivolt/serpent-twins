@@ -20,10 +20,7 @@
 #include "sunset.pal"
 #include "spectrum.pal"
 
-#define NUM_SEGMENTS 10
-#define LENGTH 120
-#define CIRC 25
-#define PIXELS_PER_SEGMENT (LENGTH*CIRC/NUM_SEGMENTS)
+#define NUM_COLS NUM_COLUMNS
 #define FRICTION_MIN_VELOCITY 0.02
 #define FRICTION_FORCE 10
 #define FPS 10
@@ -31,21 +28,21 @@
 #define DUTY_CYCLE_ON 1.0
 #define DUTY_CYCLE_PERIOD 10.0
 
-unsigned char pixels[LENGTH*CIRC*3];
-float position[LENGTH][CIRC];
-float velocity[LENGTH][CIRC];
+unsigned char pixels[NUM_ROWS*NUM_COLS*3];
+float position[NUM_ROWS][NUM_COLS];
+float velocity[NUM_ROWS][NUM_COLS];
 #define MASS 1  // kg
 #define SPRING_CONSTANT 300  // N/m
 
 void tick(float dt) {
-  for (int i = 0; i < LENGTH; i++) {
-    for (int j = 0; j < CIRC; j++) {
-      float delta = (position[i][(j + 1) % CIRC] - position[i][j]) +
-                    (position[i][(j + CIRC - 1) % CIRC] - position[i][j]);
+  for (int i = 0; i < NUM_ROWS; i++) {
+    for (int j = 0; j < NUM_COLS; j++) {
+      float delta = (position[i][(j + 1) % NUM_COLS] - position[i][j]) +
+          (position[i][(j + NUM_COLS - 1) % NUM_COLS] - position[i][j]);
       if (i > 0) {
         delta += (position[i - 1][j] - position[i][j]);
       }
-      if (i < LENGTH - 1) {
+      if (i < NUM_ROWS - 1) {
         delta += (position[i + 1][j] - position[i][j]);
       }
       delta += -position[i][j]*0.02;
@@ -58,8 +55,8 @@ void tick(float dt) {
       velocity[i][j] += force/MASS * dt;
     }
   }
-  for (int i = 0; i < LENGTH; i++) {
-    for (int j = 0; j < CIRC; j++) {
+  for (int i = 0; i < NUM_ROWS; i++) {
+    for (int j = 0; j < NUM_COLS; j++) {
       position[i][j] += velocity[i][j] * dt;
     }
   }
@@ -84,8 +81,8 @@ void next_frame(int f) {
       env_map[e*3+1] = 410 - e*0.4;
       env_map[e*3+2] = 0;
     }
-    for (int i = 0; i < LENGTH; i++) {
-      for (int j = 0; j < CIRC; j++) {
+    for (int i = 0; i < NUM_ROWS; i++) {
+      for (int j = 0; j < NUM_COLS; j++) {
         position[i][j] = 0;
         velocity[i][j] = 0;
       }
@@ -95,36 +92,36 @@ void next_frame(int f) {
   float duty_phase = t - ((int) (t / DUTY_CYCLE_PERIOD) * DUTY_CYCLE_PERIOD);
   if (duty_phase >= 0 && duty_phase < DUTY_CYCLE_ON) {
     if (last_on == 0) {
-      drop_x = rand() % (LENGTH - 1);
-      drop_y = rand() % CIRC;
+      drop_x = rand() % (NUM_ROWS - 1);
+      drop_y = rand() % NUM_COLS;
       drop_impulse = -drop_impulse;
     }
     float k = sin(duty_phase/DUTY_CYCLE_ON*M_PI);
     velocity[drop_x][drop_y] += drop_impulse*k;
-    velocity[drop_x][(drop_y + 1) % CIRC] += drop_impulse*k;
+    velocity[drop_x][(drop_y + 1) % NUM_COLS] += drop_impulse*k;
     velocity[drop_x + 1][drop_y] += drop_impulse*k;
-    velocity[drop_x + 1][(drop_y + 1) % CIRC] += drop_impulse*k;
+    velocity[drop_x + 1][(drop_y + 1) % NUM_COLS] += drop_impulse*k;
     last_on = 1;
   } else {
     last_on = 0;
   }
-  for (int j = 0; j < CIRC; j++) {
+  for (int j = 0; j < NUM_COLS; j++) {
     position[0][j] = 0;
-    position[LENGTH - 1][j] = 0;
+    position[NUM_ROWS - 1][j] = 0;
   }
   for (int t = 0; t < TICKS_PER_FRAME; t++) {
     tick(1.0/FPS/TICKS_PER_FRAME);
   }
-  for (int i = 0; i < LENGTH; i++) {
-    for (int j = 0; j < CIRC; j++) {
+  for (int i = 0; i < NUM_ROWS; i++) {
+    for (int j = 0; j < NUM_COLS; j++) {
       int e = (position[i][j]-position[i+1][j])*300 + ENV_MAP_SIZE/2;
       e = (e < 0) ? 0 : (e > ENV_MAP_SIZE - 1) ? ENV_MAP_SIZE - 1 : e;
       unsigned char* ep = ENV_MAP + e*3;
-      set_rgb(pixels, i*CIRC + ((i % 2) ? (CIRC-1-j) : j),
+      set_rgb(pixels, i*NUM_COLS + ((i % 2) ? (NUM_COLS-1-j) : j),
               ep[0]*180/255, ep[1]*180/255, ep[2]*180/255);
     }
   }
-  for (int s = 0; s < NUM_SEGMENTS; s++) {
-    put_pixels(s, pixels + s*PIXELS_PER_SEGMENT*3, PIXELS_PER_SEGMENT);
+  for (int s = 0; s < NUM_SEGS; s++) {
+    put_segment_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
   }
 }
