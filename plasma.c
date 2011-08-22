@@ -21,12 +21,14 @@
 #define PALETTE SPECTRUM_PALETTE
 
 float sin_table[256];
+byte head_pixels[HEAD_PIXELS*3];
 byte pixels[NUM_PIXELS*3];
 
 #define SIN(n) sin_table[((int) (n)) & 0xff]
 
-void next_frame(int f) {
-  if (f == 0) {
+void next_frame(int frame) {
+  float f = frame * 0.1;
+  if (frame == 0) {
     for (int i = 0; i < 256; i++) {
       sin_table[i] = sin(i/256.0*2*M_PI);
     }
@@ -42,8 +44,12 @@ void next_frame(int f) {
       set_from_palette(pixels, pixel_index(r, c), PALETTE, 0.5 + altitude*0.3);
     }
   }
+  for (int h = 0; h < HEAD_PIXELS; h++) {
+    set_from_palette(head_pixels, h, PALETTE, f*0.001);
+  }
 
+  put_head_pixels(head_pixels, HEAD_PIXELS);
   for (int s = 0; s < NUM_SEGS; s++) {
-    put_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
+    put_segment_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
   }
 }
