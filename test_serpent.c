@@ -26,12 +26,14 @@ void next_frame(int frame) {
     if (i == frame % HEAD_PIXELS) {
       set_rgb(head, i, 255, 255, 255);
     } else {
-      set_rgb(head, i, 32, 32, 32);
+      set_rgb(head, i, 1, 1, 1);
     }
   }
   for (s = 0; s < NUM_SEGS; s++) {
     for (i = 0; i < SEG_PIXELS; i++) {
-      if (i == s) {
+      if ((frame % 20 < 10) && ((frame/20) % NUM_SEGS) == s) {
+        set_rgb(segments[s], i, 0, 0, 0);
+      } else if (i == s) {
         set_rgb(segments[s], i, 0, 0, 0);
       } else if (i == frame % SEG_PIXELS || i == (frame + s + 1) % SEG_PIXELS) {
         set_rgb(segments[s], i, 255, 255, 255);
