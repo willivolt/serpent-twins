@@ -392,7 +392,11 @@ void init(void) {
 }
 
 /* The main public interface.  Implement next_frame() and call this. */
-void put_pixels(int segment, unsigned char* pixels, int n) {
+void put_head_pixels(unsigned char* pixels, int n) {
+  /* Not implemented for now. */
+}
+
+void put_segment_pixels(int segment, unsigned char* pixels, int n) {
   for (int i = 0; i < n; i++) {
     int k = i/LED_NA;
     int a = (k % 2) ? (i % LED_NA) : (LED_NA - 1 - i % LED_NA);
