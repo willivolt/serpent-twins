@@ -3,7 +3,7 @@
 # Run an animation on the Chumby.
 
 CC=gcc
-COPTS="-std=c99 -lm -O2"
+COPTS="-std=c99 -lm -O3"
 
 name=${1%%.c}
 if [ ! -d build ]; then mkdir build; fi

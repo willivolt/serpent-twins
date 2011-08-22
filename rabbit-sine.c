@@ -170,7 +170,9 @@ void next_frame(int frame) {
         pixels[i*3 + 1] = g;
         pixels[i*3 + 2] = b;
     }
-    put_pixels(0, pixels, AROUND*LONG*NSEGS);
+    for (int s = 0; s < NUM_SEGS; s++) {
+      put_segment_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
+    }
 }
 
 

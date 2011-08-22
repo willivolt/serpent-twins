@@ -54,6 +54,6 @@ void next_frame(int f) {
   }
 
   for (int s = 0; s < NUM_SEGS; s++) {
-    put_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
+    put_segment_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
   }
 }
