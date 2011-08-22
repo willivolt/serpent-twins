@@ -17,6 +17,8 @@
 #define M_PI 3.1415926535897932384626433832795
 #endif
 
+#define HEAD_PIXELS 400 // number of pixels in the serpent's head
+
 #define NUM_SEGS 10 // number of segments in the serpent
 #define SEG_ROWS 12 // rows (rings) of pixels in one segment
 #define NUM_ROWS (NUM_SEGS*SEG_ROWS) // rows of pixels in the entire serpent
@@ -46,6 +48,14 @@ typedef struct { byte r, g, b; } pixel;
   *(__p++) = b; \
 }
 
+// sets the colour of a single pixel
+#define set_pixel(pixels, index, pix) { \
+  byte* __p = (pixels) + (index)*3; \
+  *(__p++) = pix.r; \
+  *(__p++) = pix.g; \
+  *(__p++) = pix.b; \
+}
+
 // maps f (a float from 0.0 to 1.0) to a colour in a given palette
 #define palette_index(palette, f) ((int) (((f) - floor(f))*palette##_SIZE))
 
@@ -58,5 +68,6 @@ typedef struct { byte r, g, b; } pixel;
   *(__d++) = *(__s++); \
 }
 
-void put_pixels(int segment, byte* pixels, int n);
+void put_head_pixels(byte* pixels, int n);
+void put_segment_pixels(int segment, byte* pixels, int n);
 void next_frame(int frame);
