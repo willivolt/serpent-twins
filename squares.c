@@ -99,7 +99,9 @@ void next_frame(int frame) {
 			pixels[i*3+2] = s->b;
 		}
 	}
-	put_pixels(0, pixels, NUM_PIXELS);
+        for (int s = 0; s < NUM_SEGS; s++) {
+		put_segment_pixels(s, pixels + 3*SEG_PIXELS*s, SEG_PIXELS);
+        }
 	move_sprites();
 }
 
