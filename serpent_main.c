@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/time.h>
 #include <sys/timeb.h>
 #include "total_control.h"
@@ -10,24 +11,37 @@
 
 #define FRAME_MS 50
 
-byte strands[NUM_SEGS][SEG_PIXELS*3];
-byte* strand_ptrs[NUM_SEGS] = {
-  &(strands[0][0]),
-  &(strands[1][0]),
-  &(strands[2][0]),
-  &(strands[3][0]),
-  &(strands[4][0]),
-  &(strands[5][0]),
-  &(strands[6][0]),
-  &(strands[7][0]),
-  &(strands[8][0]),
-  &(strands[9][0])
+#define HEAD_PIXELS 400
+
+static byte head[(1 + HEAD_PIXELS)*3];
+
+static byte segments[NUM_SEGS][(1 + SEG_PIXELS)*3];
+
+static byte* strand_ptrs[1 + NUM_SEGS] = {
+  head,
+  segments[0],
+  segments[1],
+  segments[2],
+  segments[3],
+  segments[4],
+  segments[5],
+  segments[6],
+  segments[7],
+  segments[8],
+  segments[9]
 };
 
-int longest_sequence = 0;
+static int longest_sequence = 0;
 
-void put_pixels(int segment, byte* pixels, int n) {
-  memcpy(strand_ptrs[segment], pixels, n*3);
+void put_head_pixels(byte* pixels, int n) {
+  memcpy(head + 3, pixels, n*3);  // leave first pixel black
+  if (n > longest_sequence) {
+    longest_sequence = n;
+  }
+}
+
+void put_segment_pixels(int segment, byte* pixels, int n) {
+  memcpy(segments[segment] + 3, pixels, n*3);  // leave first pixel black
   if (n > longest_sequence) {
     longest_sequence = n;
   }
@@ -46,12 +60,13 @@ int main(int argc, char* argv[]) {
   int now;
   int s, i;
 
-  bzero(strands, NUM_SEGS*SEG_PIXELS*3);
+  bzero(head, (1 + HEAD_PIXELS)*3);
+  bzero(segments, NUM_SEGS*(1 + SEG_PIXELS)*3);
   tcl_init();
   while (1) {
     longest_sequence = 0;
     next_frame(f++);
-    tcl_put_pixels_multi(strand_ptrs, NUM_SEGS, longest_sequence);
+    tcl_put_pixels_multi(strand_ptrs, 1 + NUM_SEGS, longest_sequence + 1);
     next_frame_time += FRAME_MS;
     now = get_milliseconds();
     printf("frame %d (%.1f fps)\r", f, f*1000.0/(now - start_time));
