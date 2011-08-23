@@ -45,6 +45,8 @@
 #define PINCTRL_PULL0   (PINCTRL_BASE + 0x400)  /* pull-up enable register */
 #define PINCTRL_DOUT0   (PINCTRL_BASE + 0x500)  /* data out register */
 #define PINCTRL_DOUT1   (PINCTRL_BASE + 0x510)  /* data out register */
+#define PINCTRL_DIN0    (PINCTRL_BASE + 0x600)  /* data in register */
+#define PINCTRL_DIN1    (PINCTRL_BASE + 0x610)  /* data in register */
 #define PINCTRL_DOE0    (PINCTRL_BASE + 0x700)  /* output enable register */
 #define PINCTRL_DOE1    (PINCTRL_BASE + 0x710)  /* output enable register */
 
@@ -66,8 +68,8 @@
 #define D11  (1<<15)  // bank 0 bit 15  GPMI_D15   P200    25    (Tx)
 
 // Button input bits     GPIO bank/bit  CPU pin    Header  Pin   Onboard label
-#define BTN1 (1<<6)   // bank 1 bit 6   LCD_D06    P401    9     G0
-#define BTN2 (1<<7)   // bank 1 bit 7   LCD_D07    P401    10    G1
+#define BTN1 (1<<8)   // bank 1 bit 8   LCD_D08    P401    11    G2
+#define BTN2 (1<<9)   // bank 1 bit 9   LCD_D09    P401    12    G3
 #define BTN3 (1<<15)  // bank 1 bit 15  LCD_D15    P401    19    R3
 #define BTN4 (1<<16)  // bank 1 bit 16  LCD_D16    P401    20    R4
 
@@ -115,6 +117,11 @@ static unsigned int* pinctrl_mem = 0;
 void pinctrl_write(unsigned int offset, unsigned int value) {
   int scaled_offset = (offset - (offset & ~0xffff));
   pinctrl_mem[scaled_offset / sizeof(int)] = value;
+}
+
+unsigned int pinctrl_read(unsigned int offset) {
+  int scaled_offset = (offset - (offset & ~0xffff));
+  return pinctrl_mem[scaled_offset / sizeof(int)];
 }
 
 #define PINCTRL_SET(address, value) pinctrl_write((address) + 4, value)
@@ -280,5 +287,19 @@ void tcl_put_pixels_multi(byte** pixel_ptrs, int num_channels, int num_pixels) {
     for (j = 0; j < num_channels; j++) {
       ptrs[j] += 3;
     }
+  }
+}
+
+// Read a button (b = 1, 2, 3, or 4).
+byte tcl_read_button(byte b) {
+  switch (b) {
+    case 1:
+      return (pinctrl_read(PINCTRL_DIN1) & BTN1) ? 1 : 0;
+    case 2:
+      return (pinctrl_read(PINCTRL_DIN1) & BTN2) ? 1 : 0;
+    case 3:
+      return (pinctrl_read(PINCTRL_DIN1) & BTN3) ? 1 : 0;
+    case 4:
+      return (pinctrl_read(PINCTRL_DIN1) & BTN4) ? 1 : 0;
   }
 }
