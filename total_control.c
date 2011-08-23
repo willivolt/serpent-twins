@@ -60,33 +60,53 @@
 #define D5   (1<<5)   // bank 0 bit 5   GPMI_D05   P200    12    (D5)
 #define D6   (1<<7)   // bank 0 bit 7   GPMI_D06   P200    14    (D7)
 #define D7   (1<<6)   // bank 0 bit 6   GPMI_D07   P200    16    (D6)
-#define D8   (1<<14)  // bank 0 bit 14  GPMI_D14   P200    26    (Rx)
-#define D9   (1<<15)  // bank 0 bit 15  GPMI_D15   P200    25    (Tx)
-#define D10  (1<<30)  // bank 0 bit 30  I2C_SCL    P200    11    (SCL)
-#define D11  (1<<31)  // bank 0 bit 31  I2C_SDA    P200    13    (SDA)
-#define D12  (1<<28)  // bank 1 bit 28  PWM2       P200    20    (PM2)
+#define D8   (1<<28)  // bank 1 bit 28  PWM2       P200    20    (PM2)
+#define D9   (1<<30)  // bank 1 bit 30  PWM4       P200    24    (PM4)
+#define D10  (1<<14)  // bank 0 bit 14  GPMI_D14   P200    26    (Rx)
+#define D11  (1<<15)  // bank 0 bit 15  GPMI_D15   P200    25    (Tx)
 
-// Button input bits   GPIO bank/bit    CPU pin    Header  Pin   Onboard label
-#define BTN1 (1<<30)  // bank 1 bit 30  PWM4       P200    24    BND
-#define BTN2 (1<<1)   // bank 1 bit 1   LCD_D01    P401    3     B1
-#define BTN3 (1<<2)   // bank 1 bit 2   LCD_D02    P401    4     B2
-#define BTN4 (1<<3)   // bank 1 bit 3   LCD_D03    P401    5     B3
+// Button input bits     GPIO bank/bit  CPU pin    Header  Pin   Onboard label
+#define BTN1 (1<<6)   // bank 1 bit 6   LCD_D06    P401    9     G0
+#define BTN2 (1<<7)   // bank 1 bit 7   LCD_D07    P401    10    G1
+#define BTN3 (1<<15)  // bank 1 bit 15  LCD_D15    P401    19    R3
+#define BTN4 (1<<16)  // bank 1 bit 16  LCD_D16    P401    20    R4
 
-// Pins in use: bank 0, pins 0-7, 14, and 15 (two bits, 11, for each pin)
+#define MAX_CHANNELS 11
+byte ZEROES[MAX_CHANNELS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+typedef struct {
+  unsigned int address;
+  unsigned int mask;
+} channel_pin;
+channel_pin CHANNEL_PINS[MAX_CHANNELS] = {
+  {PINCTRL_DOUT0, D1},
+  {PINCTRL_DOUT0, D2},
+  {PINCTRL_DOUT0, D3},
+  {PINCTRL_DOUT0, D4},
+  {PINCTRL_DOUT0, D5},
+  {PINCTRL_DOUT0, D6},
+  {PINCTRL_DOUT0, D7},
+  {PINCTRL_DOUT1, D8},
+  {PINCTRL_DOUT1, D9},
+  {PINCTRL_DOUT0, D10},
+  {PINCTRL_DOUT0, D11}
+};
+
+// Pins in use: bank 0, bits 0-7, 14, and 15 (two bits, 11, for each pin)
 #define BANK0_MUXSEL0 (0xf000ffff) // 1111 0000 0000 0000 1111 1111 1111 1111
-// Pins in use: bank 0, pins 30 and 31
-#define BANK0_MUXSEL1 (0xf0000000) // 1111 0000 0000 0000 0000 0000 0000 0000
-// Pins in use: bank 1, pins 1, 2, and 3
-#define BANK1_MUXSEL2 (0x000000fc) // 0000 0000 0000 0000 0000 0000 1111 1100
-// Pins in use: bank 1, pins 28 and 30
-#define BANK1_MUXSEL3 (0x000000fc) // 0000 0000 0000 0000 0000 0000 1111 1100
+// Pins in use: bank 0, none of bits 16-31
+#define BANK0_MUXSEL1 (0x00000000) // 0000 0000 0000 0000 0000 0000 0000 0000
+// Pins in use: bank 1, pins 6, 7, and 15
+#define BANK1_MUXSEL2 (0xc000f000) // 1100 0000 0000 0000 1111 0000 0000 0000
+// Pins in use: bank 1, pins 16, 28, and 30
+#define BANK1_MUXSEL3 (0x330000f3) // 0011 0011 0000 0000 0000 0000 0000 0011
 
 // Pins to enable for output
-#define BANK0_OUT_MASK \
-    (CLK | D1 | D2 | D3 | D4 | D5 | D6 | D7 | D8 | D9 | D10 | D11)
-#define BANK1_OUT_MASK (D12)
+#define BANK0_OUT_MASK (CLK | D1 | D2 | D3 | D4 | D5 | D6 | D7 | D10 | D11)
+#define BANK1_OUT_MASK (D8 | D9)
 
 // Pins to enable for input
+#define BANK0_IN_MASK (0)
 #define BANK1_IN_MASK (BTN1 | BTN2 | BTN3 | BTN4)
 
 
@@ -100,17 +120,6 @@ void pinctrl_write(unsigned int offset, unsigned int value) {
 #define PINCTRL_SET(address, value) pinctrl_write((address) + 4, value)
 #define PINCTRL_CLR(address, value) pinctrl_write((address) + 8, value)
 
-#define MAX_CHANNELS 12
-
-byte ZEROES[MAX_CHANNELS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-unsigned int CHANNEL_ADDRESS[MAX_CHANNELS] = {
-  PINCTRL_DOUT0, PINCTRL_DOUT0, PINCTRL_DOUT0, PINCTRL_DOUT0,
-  PINCTRL_DOUT0, PINCTRL_DOUT0, PINCTRL_DOUT0, PINCTRL_DOUT0,
-  PINCTRL_DOUT0, PINCTRL_DOUT0, PINCTRL_DOUT0, PINCTRL_DOUT1
-};
-unsigned int CHANNEL_MASK[MAX_CHANNELS] = {
-  D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12
-};
 
 int gpio_init() {
   static int fd = 0;
@@ -138,6 +147,7 @@ int gpio_init() {
   // Enable pins for input and output.
   PINCTRL_SET(PINCTRL_DOE0, BANK0_OUT_MASK);
   PINCTRL_SET(PINCTRL_DOE1, BANK1_OUT_MASK);
+  PINCTRL_CLR(PINCTRL_DOE0, BANK0_IN_MASK);
   PINCTRL_CLR(PINCTRL_DOE1, BANK1_IN_MASK);
 
   return 0;
@@ -175,9 +185,9 @@ void spi_write_multi(byte* values, int num_channels) {
     spi_clock_low();
     for (c = 0; c < num_channels; c++) {
       if (values[c] & bit) {
-        PINCTRL_SET(CHANNEL_ADDRESS[c], CHANNEL_MASK[c]);
+        PINCTRL_SET(CHANNEL_PINS[c].address, CHANNEL_PINS[c].mask);
       } else {
-        PINCTRL_CLR(CHANNEL_ADDRESS[c], CHANNEL_MASK[c]);
+        PINCTRL_CLR(CHANNEL_PINS[c].address, CHANNEL_PINS[c].mask);
       }
     }
     spi_clock_high();

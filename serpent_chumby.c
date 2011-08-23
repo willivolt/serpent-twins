@@ -11,8 +11,6 @@
 
 #define FRAME_MS 50
 
-#define HEAD_PIXELS 400
-
 static byte head[(1 + HEAD_PIXELS)*3];
 
 static byte segments[NUM_SEGS][(1 + SEG_PIXELS)*3];
