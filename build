@@ -10,5 +10,4 @@ if [ ! -d bin ]; then mkdir bin; fi
 
 echo $CC $COPTS serpent_chumby.c total_control.c $name.c -o bin/$name && \
     $CC $COPTS serpent_chumby.c total_control.c $name.c -o bin/$name && \
-    echo bin/$name && \
-    bin/$name
+    ls -al bin/$name
