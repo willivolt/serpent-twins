@@ -17,7 +17,7 @@
 #define M_PI 3.1415926535897932384626433832795
 #endif
 
-#define HEAD_PIXELS 400 // number of pixels in the serpent's head
+#define HEAD_PIXELS 394 // number of pixels in the serpent's head
 
 #define NUM_SEGS 10 // number of segments in the serpent
 #define SEG_ROWS 12 // rows (rings) of pixels in one segment
