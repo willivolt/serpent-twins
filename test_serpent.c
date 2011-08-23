@@ -50,11 +50,11 @@ void flash_number(byte* pixels, int i, int step, int number) {
 void next_frame(int frame) {
   int i, s;
   int step = frame % (HEAD_PIXELS + 300);
-  int value, r, g, b;
+  byte b;
 
   memset(head, 0, HEAD_PIXELS*3);
   memset(segments, 0, NUM_SEGS*SEG_PIXELS*3);
-  
+
   if (step < 300) {
     for (i = 0; i < HEAD_PIXELS; i++) {
       flash_number(head, i, step % 150, i);
@@ -84,6 +84,15 @@ void next_frame(int frame) {
         } else {
           set_pixel(segments[s], i, segcolours[s]);
         }
+      }
+    }
+  }
+
+  for (b = 1; b <= 4; b++) {
+    if (tcl_read_button(b)) {
+      set_rgb(head, b, 255, 255, 255);
+      for (s = 0; s < NUM_SEGS; s++) {
+        set_rgb(segments[s], b, 255, 255, 255);
       }
     }
   }

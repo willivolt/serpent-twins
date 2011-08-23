@@ -20,3 +20,6 @@ void tcl_put_pixel_multi(byte** pixel_ptrs, int num_strands);
 
 // Send multiple sequences of pixels in parallel to multiple strands.
 void tcl_put_pixels_multi(byte** pixel_ptrs, int num_strands, int num_pixels);
+
+// Read a button (b = 1, 2, 3, or 4).
+byte tcl_read_button(byte b);
