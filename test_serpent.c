@@ -13,8 +13,8 @@ pixel segcolours[NUM_SEGS] = {
   {0, 32, 128},  // ice
   {0, 0, 128},  // blue
   {32, 0, 128},  // violet
-  {64, 0, 128},  // lavender
-  {128, 0, 128}  // magenta
+  {128, 0, 128},  // lavender
+  {128, 0, 32}  // pink
 };
 
 void flash_number(byte* pixels, int i, int step, int number) {
@@ -77,7 +77,7 @@ void next_frame(int frame) {
       for (i = 0; i < SEG_PIXELS; i++) {
         if ((step % 20 < 10) && ((step/20) % NUM_SEGS) == s) {
           set_rgb(segments[s], i, 0, 0, 0);
-        } else if (i == s) {
+        } else if (i == s + 1) {  // turn off pixel 1 on segment 0, etc.
           set_rgb(segments[s], i, 0, 0, 0);
         } else if (i == step || i == step + s + 1) {
           set_rgb(segments[s], i, 255, 255, 255);
@@ -89,7 +89,7 @@ void next_frame(int frame) {
   }
 
   for (b = 1; b <= 4; b++) {
-    if (tcl_read_button(b)) {
+    if (read_button(b)) {
       set_rgb(head, b, 255, 255, 255);
       for (s = 0; s < NUM_SEGS; s++) {
         set_rgb(segments[s], b, 255, 255, 255);

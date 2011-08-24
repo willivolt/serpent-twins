@@ -81,7 +81,7 @@ colour render_grids[NUM_SEGS][(SEG_NK + 1)*SEG_NA];
 #define BLUR_Z 1.5 // depth of LED under surface, in render units
 #define BLUR_RADIUS 8
 #define BLUR_WIDTH (BLUR_RADIUS*2 + 1)
-#define BLUR_BRIGHTNESS_SCALE 0.2
+#define BLUR_BRIGHTNESS_SCALE 0.15
 double blur[BLUR_WIDTH][BLUR_WIDTH];
 
 // Animation parameters
@@ -254,6 +254,8 @@ void reshape(int width, int height) {
   update_camera();
 }
 
+static int button_state = 0;
+
 void mouse(int button, int state, int x, int y) {
   if (state == GLUT_DOWN && glutGetModifiers() & GLUT_ACTIVE_SHIFT) {
     dollying = 1;
@@ -287,13 +289,74 @@ void motion(int x, int y) {
 }
 
 void keyboard(unsigned char key, int x, int y) {
-  if (key == '\x1b' || key == 'q') {
-    printf("\n");
-    exit(0);
+  switch (key) {
+    case '\x1b':
+    case 'q':
+      printf("\n");
+      exit(0);
+    case ' ':
+      paused = !paused;
+      break;
+    case 'y':
+    case '1':
+      button_state |= 1;
+      break;
+    case 'a':
+    case '2':
+      button_state |= 2;
+      break;
+    case 'b':
+    case '3':
+      button_state |= 4;
+      break;
+    case 'x':
+    case '4':
+      button_state |= 8;
+      break;
   }
-  if (key == ' ') {
-    paused = !paused;
+}
+
+void keyboard_up(unsigned char key, int x, int y) {
+  switch (key) {
+    case 'y':
+    case '1':
+      button_state &= ~1;
+      break;
+    case 'a':
+    case '2':
+      button_state &= ~2;
+      break;
+    case 'b':
+    case '3':
+      button_state &= ~4;
+      break;
+    case 'x':
+    case '4':
+      button_state &= ~8;
+      break;
   }
+}
+
+int read_button(int b) {
+  switch (b) {
+    case 'Y':
+    case 'y':
+    case 1:
+      return button_state & 1;
+    case 'A':
+    case 'a':
+    case 2:
+      return button_state & 2;
+    case 'B':
+    case 'b':
+    case 3:
+      return button_state & 4;
+    case 'X':
+    case 'x':
+    case 4:
+      return button_state & 8;
+  }
+  return 0;
 }
 
 void update_render_grid() {
@@ -372,9 +435,9 @@ void init(void) {
 
   /* Set up the colour transfer curves. */
   for (int i = 0; i < 256; i++) {
-    curves[i].r = i ? 0.1 + 0.9*(i/255.0) : 0;
-    curves[i].g = i ? 0.1 + 0.9*(i/255.0) : 0;
-    curves[i].b = i ? 0.1 + 0.9*(i/255.0) : 0;
+    curves[i].r = log(i + 1)/log(256);
+    curves[i].g = log(i + 1)/log(256);
+    curves[i].b = log(i + 1)/log(256);
   }
 
   /* Set up the LED grids. */
@@ -415,7 +478,9 @@ int main(int argc, char **argv) {
   glutDisplayFunc(display);
   glutMouseFunc(mouse);
   glutMotionFunc(motion);
+  glutIgnoreKeyRepeat(1);
   glutKeyboardFunc(keyboard);
+  glutKeyboardUpFunc(keyboard_up);
   glutIdleFunc(idle);
   init();
   glutMainLoop();
