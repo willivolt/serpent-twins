@@ -71,3 +71,4 @@ typedef struct { byte r, g, b; } pixel;
 void put_head_pixels(byte* pixels, int n);
 void put_segment_pixels(int segment, byte* pixels, int n);
 void next_frame(int frame);
+int read_button(int b);
