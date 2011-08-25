@@ -104,16 +104,4 @@ void next_frame(int x) {
   for (int s = 0; s < 10; s++) {
     put_segment_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
   }
-
-  if (read_button('x')) {
-    if (clock_delay < 200) clock_delay++;
-    printf("delay %d\n", clock_delay);
-    tcl_set_clock_delay(clock_delay);
-  }
-
-  if (read_button('y')) {
-    if (clock_delay > 0) clock_delay--;
-    printf("delay %d\n", clock_delay);
-    tcl_set_clock_delay(clock_delay);
-  }
 }

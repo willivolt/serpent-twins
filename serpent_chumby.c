@@ -31,16 +31,16 @@ static int longest_sequence = 0;
 
 static byte diagnostic_colours[11][3] = {
   {255, 255, 255},  // white for head
-  {32, 0, 0},  // red for segment 1
-  {32, 8, 0},  // orange
-  {32, 32, 0},  // yellow
-  {0, 32, 0},  // green
-  {0, 32, 32},  // cyan
-  {0, 8, 32},  // ice
-  {0, 0, 32},  // blue
-  {8, 0, 32},  // violet
-  {32, 0, 32},  // lavender
-  {32, 0, 8}  // pink for segment 10
+  {128, 0, 0},  // red for segment 1
+  {128, 32, 0},  // orange
+  {128, 128, 0},  // yellow
+  {0, 128, 0},  // green
+  {0, 128, 128},  // cyan
+  {0, 32, 128},  // ice
+  {0, 0, 128},  // blue
+  {32, 0, 128},  // violet
+  {128, 0, 128},  // lavender
+  {128, 0, 32}  // pink for segment 10
 };
 
 static int toggle = 0;
@@ -96,10 +96,12 @@ int main(int argc, char* argv[]) {
   int next_frame_time = start_time;
   int now;
   int s, i;
+  int clock_delay = 50;
 
   bzero(head, (1 + HEAD_PIXELS)*3);
   bzero(segments, NUM_SEGS*(1 + SEG_PIXELS)*3);
   tcl_init();
+  tcl_set_clock_delay(clock_delay);
   while (1) {
     longest_sequence = 0;
     next_frame(f++);
@@ -111,8 +113,14 @@ int main(int argc, char* argv[]) {
     while (now < next_frame_time) {
       now = get_milliseconds();
     }
-    if (read_button('a') && read_button('b') && read_button('x') && read_button('y')) {
-      diagnostic_disco = !diagnostic_disco;
+    if (read_button('a') && read_button('b') && read_button('x')) {
+      clock_delay++;
+      tcl_set_clock_delay(++clock_delay);
+      diagnostic_disco = 1;
+    }
+    if (read_button('a') && read_button('b') && read_button('y')) {
+      tcl_set_clock_delay(--clock_delay);
+      diagnostic_disco = 0;
     }
   }
 }
