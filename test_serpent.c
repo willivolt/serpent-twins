@@ -1,5 +1,6 @@
 #include <string.h>
 #include "serpent.h"
+#include "total_control.h"
 
 byte head[HEAD_PIXELS*3];
 byte segments[NUM_SEGS][SEG_PIXELS*3];
@@ -46,6 +47,8 @@ void flash_number(byte* pixels, int i, int step, int number) {
     }
   }
 }
+
+static byte clock_delay = 0;
 
 void next_frame(int frame) {
   int i, s;
@@ -95,6 +98,18 @@ void next_frame(int frame) {
         set_rgb(segments[s], b, 255, 255, 255);
       }
     }
+  }
+  
+  if (read_button('x')) {
+    if (clock_delay < 200) clock_delay++;
+    printf("delay %d\n", clock_delay);
+    tcl_set_clock_delay(clock_delay);
+  }
+
+  if (read_button('y')) {
+    if (clock_delay > 0) clock_delay--;
+    printf("delay %d\n", clock_delay);
+    tcl_set_clock_delay(clock_delay);
   }
 
   put_head_pixels(head, HEAD_PIXELS);
