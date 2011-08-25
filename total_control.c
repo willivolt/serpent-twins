@@ -133,7 +133,7 @@ int gpio_init() {
 
   fd = open("/dev/mem", O_RDWR);
   if (fd < 0)  {
-     perror("Unable to open /dev/mem.");
+     perror("Unable to open /dev/mem");
      return -1;
   }
 
