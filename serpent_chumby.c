@@ -113,13 +113,14 @@ int main(int argc, char* argv[]) {
     while (now < next_frame_time) {
       now = get_milliseconds();
     }
-    if (read_button('a') && read_button('b') && read_button('x')) {
-      clock_delay++;
+    if (read_button('a') && read_button('x') && read_button('y')) {
       tcl_set_clock_delay(++clock_delay);
+      printf("\ndelay %d\n", clock_delay);
       diagnostic_disco = 1;
     }
-    if (read_button('a') && read_button('b') && read_button('y')) {
+    if (read_button('b') && read_button('x') && read_button('y')) {
       tcl_set_clock_delay(--clock_delay);
+      printf("\ndelay %d\n", clock_delay);
       diagnostic_disco = 0;
     }
   }
