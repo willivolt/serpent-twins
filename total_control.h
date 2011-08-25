@@ -6,6 +6,9 @@ typedef unsigned char byte;
 // Initialize Total Control Lighting.
 void tcl_init();
 
+// Adjust the SPI clock frequency.
+void tcl_set_clock_delay(byte delay_length);
+
 // Start a new pixel sequence.
 void tcl_reset();
 
