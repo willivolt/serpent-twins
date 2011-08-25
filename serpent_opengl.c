@@ -342,19 +342,19 @@ int read_button(int b) {
     case 'Y':
     case 'y':
     case 1:
-      return button_state & 1;
+      return (button_state & 1) ? 1 : 0;
     case 'A':
     case 'a':
     case 2:
-      return button_state & 2;
+      return (button_state & 2) ? 1 : 0;
     case 'B':
     case 'b':
     case 3:
-      return button_state & 4;
+      return (button_state & 4) ? 1 : 0;
     case 'X':
     case 'x':
     case 4:
-      return button_state & 8;
+      return (button_state & 8) ? 1 : 0;
   }
   return 0;
 }
