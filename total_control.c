@@ -184,19 +184,25 @@ void spi_write(byte value) {
   }
 }
 
+volatile byte delay = 0;
+volatile byte clock_delay = 0;
+
 void spi_write_multi(byte* values, int num_channels) {
   byte bit, c;
 
   spi_clock_high();
   for (bit = 0x80; bit; bit >>= 1) {
+    for (delay = 0; delay < clock_delay; delay++);
     spi_clock_low();
     for (c = 0; c < num_channels; c++) {
+      if (c == 5) spi_clock_low();
       if (values[c] & bit) {
         PINCTRL_SET(CHANNEL_PINS[c].address, CHANNEL_PINS[c].mask);
       } else {
         PINCTRL_CLR(CHANNEL_PINS[c].address, CHANNEL_PINS[c].mask);
       }
     }
+    for (delay = 0; delay < clock_delay; delay++);
     spi_clock_high();
   }
 }
@@ -207,6 +213,11 @@ void tcl_init() {
     fprintf(stderr, "Failed to initialize GPIO.\n");
     exit(1);
   }
+}
+
+// Adjust the SPI clock frequency.
+void tcl_set_clock_delay(byte delay_length) {
+  clock_delay = delay_length;
 }
 
 // Start a new pixel sequence.
@@ -293,12 +304,20 @@ void tcl_put_pixels_multi(byte** pixel_ptrs, int num_channels, int num_pixels) {
 // Read a button (b = 1, 2, 3, or 4).
 byte tcl_read_button(byte b) {
   switch (b) {
+    case 'Y':
+    case 'y':
     case 1:
       return (pinctrl_read(PINCTRL_DIN1) & BTN1) ? 1 : 0;
+    case 'A':
+    case 'a':
     case 2:
       return (pinctrl_read(PINCTRL_DIN1) & BTN2) ? 1 : 0;
+    case 'B':
+    case 'b':
     case 3:
       return (pinctrl_read(PINCTRL_DIN1) & BTN3) ? 1 : 0;
+    case 'X':
+    case 'x':
     case 4:
       return (pinctrl_read(PINCTRL_DIN1) & BTN4) ? 1 : 0;
   }
