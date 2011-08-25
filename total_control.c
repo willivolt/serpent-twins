@@ -193,7 +193,6 @@ void spi_write_multi(byte* values, int num_channels) {
   spi_clock_high();
   for (bit = 0x80; bit; bit >>= 1) {
     for (delay = 0; delay < clock_delay; delay++);
-    spi_clock_low();
     for (c = 0; c < num_channels; c++) {
       if (c == 5) spi_clock_low();
       if (values[c] & bit) {
