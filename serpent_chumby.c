@@ -64,9 +64,9 @@ void put_segment_pixels(int segment, byte* pixels, int n) {
   segments[segment][1] = diagnostic_colours[segment + 1][1];
   segments[segment][2] = diagnostic_colours[segment + 1][2];
   if (toggle % 5) {
-    segments[segments][0] = 0;
-    segments[segments][1] = 0;
-    segments[segments][2] = 0;
+    segments[segment][0] = 0;
+    segments[segment][1] = 0;
+    segments[segment][2] = 0;
   }
   toggle++;
   memcpy(segments[segment] + 3, pixels, n*3);  // skip first pixel
@@ -75,8 +75,8 @@ void put_segment_pixels(int segment, byte* pixels, int n) {
   }
 }
 
-int read_button(int b) {
-  return tcl_read_button(b);
+int read_button(int button) {
+  return tcl_read_button(button);
 }
 
 int get_milliseconds() {
