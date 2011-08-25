@@ -44,15 +44,18 @@ static byte diagnostic_colours[11][3] = {
 };
 
 static int toggle = 0;
+static int diagnostic_disco = 0;
 
 void put_head_pixels(byte* pixels, int n) {
-  head[0] = diagnostic_colours[0][0];  // diagnostic
-  head[1] = diagnostic_colours[0][1];
-  head[2] = diagnostic_colours[0][2];
-  if (toggle % 3) {
-    head[0] = head[1] = head[2] = 0;
+  if (diagnostic_disco) {
+    head[0] = diagnostic_colours[0][0];  // diagnostic
+    head[1] = diagnostic_colours[0][1];
+    head[2] = diagnostic_colours[0][2];
+    if (toggle % 3) {
+      head[0] = head[1] = head[2] = 0;
+    }
+    toggle++;
   }
-  toggle++;
   memcpy(head + 3, pixels, n*3);  // skip first pixel
   if (n > longest_sequence) {
     longest_sequence = n;
@@ -60,15 +63,17 @@ void put_head_pixels(byte* pixels, int n) {
 }
 
 void put_segment_pixels(int segment, byte* pixels, int n) {
-  segments[segment][0] = diagnostic_colours[segment + 1][0];  // diagnostic
-  segments[segment][1] = diagnostic_colours[segment + 1][1];
-  segments[segment][2] = diagnostic_colours[segment + 1][2];
-  if (toggle % 5) {
-    segments[segment][0] = 0;
-    segments[segment][1] = 0;
-    segments[segment][2] = 0;
+  if (diagnostic_disco) {
+    segments[segment][0] = diagnostic_colours[segment + 1][0];  // diagnostic
+    segments[segment][1] = diagnostic_colours[segment + 1][1];
+    segments[segment][2] = diagnostic_colours[segment + 1][2];
+    if (toggle % 5) {
+      segments[segment][0] = 0;
+      segments[segment][1] = 0;
+      segments[segment][2] = 0;
+    }
+    toggle++;
   }
-  toggle++;
   memcpy(segments[segment] + 3, pixels, n*3);  // skip first pixel
   if (n > longest_sequence) {
     longest_sequence = n;
@@ -105,6 +110,9 @@ int main(int argc, char* argv[]) {
     fflush(stdout);
     while (now < next_frame_time) {
       now = get_milliseconds();
+    }
+    if (read_button('a') && read_button('b') && read_button('x') && read_button('y')) {
+      diagnostic_disco = !diagnostic_disco;
     }
   }
 }
