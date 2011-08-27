@@ -77,8 +77,55 @@ void put_segment_pixels(int segment, byte* pixels, int n) {
   }
 }
 
-int read_button(int button) {
-  return tcl_read_button(button);
+static char button_name[5] = " yabx";
+static int button_state[5] = {0, 0, 0, 0, 0};
+static int last_button_read[5] = {0, 0, 0, 0, 0};
+static int last_button_sequence_time = 0;
+static char button_sequence[10] = "";
+static int button_sequence_i = 0;
+static int pressed_button = 0;
+static int pressed_button_count = 0;
+
+void update_buttons() {
+  pressed_button = 0;
+  pressed_button_count = 0;
+  for (int b = 1; b <= 4; b++) {
+    int state = tcl_read_button(b) ? 1 : 0;
+    if (state == last_button_read[b]) {  // debounce
+      button_state[b] = state;
+      if (state) {
+        pressed_button = b;
+      }
+    }
+    last_button_read[b] = state;
+    pressed_button_count += button_state[b];
+  }
+}
+
+const char* get_button_sequence() {
+  return button_sequence;
+}
+
+int read_button(char button) {
+  switch (button) {
+    case 'Y':
+    case 'y':
+    case 1:
+      return button_state[1];
+    case 'A':
+    case 'a':
+    case 2:
+      return button_state[2];
+    case 'B':
+    case 'b':
+    case 3:
+      return button_state[3];
+    case 'X':
+    case 'x':
+    case 4:
+      return button_state[4];
+  }
+  return 0;
 }
 
 int get_milliseconds() {
@@ -189,8 +236,9 @@ int main(int argc, char* argv[]) {
   int next_frame_time = start_time + 1000/FPS;
   int now;
   int s, i;
-  int clock_delay = 15;
+  int clock_delay = 10;
   int time_buffer[11], ti = 0, tf = 0;
+  int last_button_count = 0;
 
   bzero(head, (1 + HEAD_PIXELS)*3);
   bzero(segments, NUM_SEGS*(1 + SEG_PIXELS)*3);
@@ -209,8 +257,13 @@ int main(int argc, char* argv[]) {
     tf += (tf < 10);
     ti = (ti + 1) % 11;
     time_buffer[ti] = now;
-    printf("frame %d (%.1f fps) ", frame,
-           tf*1000.0/(now - time_buffer[(ti + 11 - tf) % 11]));
+    printf("frame %5d (%.1f fps)  %c%c%c%c  [%-10s]  ", frame,
+           tf*1000.0/(now - time_buffer[(ti + 11 - tf) % 11]),
+           read_button('a') ? 'a' : ' ',
+           read_button('b') ? 'b' : ' ',
+           read_button('x') ? 'x' : ' ',
+           read_button('y') ? 'y' : ' ',
+           button_sequence);
     if (accel_right() || accel_forward()) {
       printf("forward%+3d right%+3d\n", accel_forward(), accel_right());
     } else {
@@ -219,6 +272,21 @@ int main(int argc, char* argv[]) {
     fflush(stdout);
 
     next_frame_time += 1000/FPS;
+
+    update_buttons();
+    if (last_button_count == 0 && pressed_button_count == 1) {
+      if (button_sequence_i < 10) {
+        button_sequence[button_sequence_i++] = button_name[pressed_button];
+        button_sequence[button_sequence_i] = 0;
+        last_button_sequence_time = now;
+      }
+    }
+    last_button_count = pressed_button_count;
+    if (button_name[pressed_button] == 'y' ||
+        now - last_button_sequence_time > 10000) {  // cancel
+      button_sequence_i = 0;
+      button_sequence[0] = 0;
+    }
 
     if (read_button('a') && read_button('x') && read_button('y')) {
       if (clock_delay < 100) {

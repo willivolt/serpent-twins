@@ -73,6 +73,7 @@ typedef struct { byte r, g, b; } pixel;
 void put_head_pixels(byte* pixels, int n);
 void put_segment_pixels(int segment, byte* pixels, int n);
 void next_frame(int frame);
-int read_button(int b);
+int read_button(char b);  // 'a', 'b', 'x', or 'y'
+const char* get_button_sequence();
 int accel_right();
 int accel_forward();

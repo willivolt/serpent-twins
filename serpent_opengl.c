@@ -385,7 +385,7 @@ void special_up(int key, int x, int y) {
   }
 }
 
-int read_button(int b) {
+int read_button(char b) {
   switch (b) {
     case 'Y':
     case 'y':
