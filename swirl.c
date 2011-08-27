@@ -41,10 +41,6 @@ float button_force = 30;
 float restore_factor = 1;
 float restore_center = 0;
 
-void set_hue(int row, int col, float hue) {
-  set_from_palette(pixels, pixel_index(row, col), PALETTE, hue - floor(hue));
-}
-
 void tick(float dt) {
   for (int i = 0; i < NUM_ROWS; i++) {
     float force;
@@ -113,7 +109,8 @@ void next_frame(int x) {
 
   for (int i = 0; i < NUM_ROWS; i++) {
     for (int j = 0; j < NUM_COLUMNS; j++) {
-      set_hue(i, j, position[i] + (float) j / NUM_COLUMNS + 0.5);
+      set_from_palette(pixels, pixel_index(i, j), PALETTE,
+                       position[i] + (float) j / NUM_COLUMNS + 0.5);
     }
   }
 
