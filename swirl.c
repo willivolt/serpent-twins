@@ -25,7 +25,6 @@
 #define DUTY_CYCLE_ON 120
 #define DUTY_CYCLE_OFF 120
 #define IMPULSE_START 100
-#define BUTTON_FORCE 10
 
 #define TICKS_PER_FRAME 10 
 #define FPS 20
@@ -38,6 +37,8 @@ unsigned char pixels[NUM_PIXELS*3];
 float position[NUM_ROWS];  // rev
 float velocity[NUM_ROWS];  // rev/s
 int auto_impulse = 1;
+float button_force = 30;
+float restore_factor = 1;
 
 void set_hue(int row, int col, float hue) {
   set_from_palette(pixels, pixel_index(row, col), PALETTE, hue - floor(hue));
@@ -50,13 +51,14 @@ void tick(float dt) {
       if (auto_impulse) {
         continue;
       }
-      force = (read_button('b') - read_button('a'))*BUTTON_FORCE;
+      force = (read_button('b') - read_button('a'))*button_force;
     } else {
       force = SPRING_CONSTANT * (position[i-1] - position[i]);
     }
     if (i < NUM_ROWS - 1) {
       force += SPRING_CONSTANT * (position[i+1] - position[i]);
     }
+    force -= restore_factor * position[i];
     if (velocity[i] > FRICTION_MIN_VELOCITY) {
       force -= FRICTION_FORCE;
     } else if (velocity[i] < -FRICTION_MIN_VELOCITY) {
@@ -90,6 +92,14 @@ void next_frame(int x) {
   if (read_button('a') || read_button('b')) {
     auto_impulse = 0;
   }
+  if (read_button('x')) {
+    button_force = 10;
+    restore_factor = 0;
+  }
+  if (read_button('y')) {
+    button_force = 30;
+    restore_factor = 1;
+  }
   
   for (int t = 0; t < TICKS_PER_FRAME; t++) {
     tick(1.0/FPS/TICKS_PER_FRAME);
@@ -97,7 +107,7 @@ void next_frame(int x) {
 
   for (int i = 0; i < NUM_ROWS; i++) {
     for (int j = 0; j < NUM_COLUMNS; j++) {
-      set_hue(i, j, position[i] + (float) j / NUM_COLUMNS);
+      set_hue(i, j, position[i] + (float) j / NUM_COLUMNS + 0.5);
     }
   }
 
