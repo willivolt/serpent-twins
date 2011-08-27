@@ -251,8 +251,6 @@ void reshape(int width, int height) {
   update_camera();
 }
 
-static int button_state = 0;
-
 void mouse(int button, int state, int x, int y) {
   if (state == GLUT_DOWN && glutGetModifiers() & GLUT_ACTIVE_SHIFT) {
     dollying = 1;
@@ -284,6 +282,8 @@ void motion(int x, int y) {
     update_camera();
   }
 }
+
+static int button_state = 0;
 
 void keyboard(unsigned char key, int x, int y) {
   switch (key) {
@@ -334,6 +334,38 @@ void keyboard_up(unsigned char key, int x, int y) {
   }
 }
 
+static int accel_f = 0, accel_r = 0;
+
+void special(int key, int x, int y) {
+  switch (key) {
+    case GLUT_KEY_UP:
+      accel_f = 15;
+      break;
+    case GLUT_KEY_DOWN:
+      accel_f = -15;
+      break;
+    case GLUT_KEY_LEFT:
+      accel_r = -15;
+      break;
+    case GLUT_KEY_RIGHT:
+      accel_r = 15;
+      break;
+  }
+}
+
+void special_up(int key, int x, int y) {
+  switch (key) {
+    case GLUT_KEY_UP:
+    case GLUT_KEY_DOWN:
+      accel_f = 0;
+      break;
+    case GLUT_KEY_LEFT:
+    case GLUT_KEY_RIGHT:
+      accel_r = 0;
+      break;
+  }
+}
+
 int read_button(int b) {
   switch (b) {
     case 'Y':
@@ -354,6 +386,14 @@ int read_button(int b) {
       return (button_state & 8) ? 1 : 0;
   }
   return 0;
+}
+
+int accel_right() {
+  return accel_r;
+}
+
+int accel_forward() {
+  return accel_f;
 }
 
 void update_render_grid() {
@@ -409,8 +449,13 @@ void idle(void) {
       tf += (tf < 10);
       ti = (ti + 1) % 11;
       time_buffer[ti] = now;
-      printf("frame %d (%.1f fps)\r", frame,
+      printf("frame %d (%.1f fps) ", frame,
              tf/(now - time_buffer[(ti + 11 - tf) % 11]));
+      if (accel_right() || accel_forward()) {
+        printf("forward%+3d right%+3d\n", accel_forward(), accel_right());
+      } else {
+        printf("\r");
+      }
       fflush(stdout);
 
       if (now > next_frame_time + 1.0) {
@@ -494,6 +539,8 @@ int main(int argc, char **argv) {
   glutIgnoreKeyRepeat(1);
   glutKeyboardFunc(keyboard);
   glutKeyboardUpFunc(keyboard_up);
+  glutSpecialFunc(special);
+  glutSpecialUpFunc(special_up);
   glutIdleFunc(idle);
   init();
   glutMainLoop();

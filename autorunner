@@ -1,0 +1,51 @@
+#!/bin/bash
+
+echo "Started autorunner."
+cd /mnt/storage
+if [ -f autostart ]; then
+    echo "Running autostart..."
+    ./autostart &
+fi
+while true; do
+    if [ -d /mnt/usb-*/autorun ]; then
+        echo "USB storage found."
+        rm -rf /mnt/storage/autorun
+        echo "Copying..."
+        cp -pr /mnt/usb-*/autorun /mnt/storage/autorun
+        cd /mnt/storage/autorun
+        ls -al
+        rm -rf autobuilt autostart
+        if [ -f autosh ]; then
+            echo "Running autosh..."
+            bash autosh 2>&1 | tee /mnt/usb-*/autosh.out
+        fi
+        if [ -f autostart ]; then
+            ls -al autostart
+            echo "Stopping autostart/autobuilt..."
+            killall autostart
+            killall autobuilt
+            cp autostart /mnt/storage/autostart
+            echo "Unmounting USB storage..."
+            cd /mnt/storage
+            umount /mnt/usb-*
+            echo "Restarting autostart..."
+            ./autostart &
+        elif [ -f autobuilt ]; then
+            ls -al autobuilt
+            echo "Stopping autostart/autobuilt..."
+            killall autostart
+            killall autobuilt
+            cp autobuilt /mnt/storage/autobuilt
+            echo "Unmounting USB storage..."
+            cd /mnt/storage
+            umount /mnt/usb-*
+            echo "Restarting autobuilt..."
+            ./autobuilt &
+        else
+            echo "Nothing built.  Unmounting USB storage."
+            umount /mnt/usb-*
+        fi
+        cd /
+    fi
+    sleep 1
+done

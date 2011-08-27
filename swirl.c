@@ -84,6 +84,8 @@ void next_frame(int x) {
     if (x > IMPULSE_START && duty_phase < DUTY_CYCLE_ON) {
       position[0] = sin(
           2*M_PI*(duty_phase/SINE_WAVE_PERIOD))*SINE_WAVE_AMPLITUDE;
+      button_force = 10;
+      restore_factor = 0;
     }
   }
   if (read_button('a') || read_button('b')) {

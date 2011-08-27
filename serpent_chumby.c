@@ -1,9 +1,14 @@
 /* Serpent main routine, for Chumby. */
 
-#include <stdlib.h>
+#define _SVID_SOURCE 1
 #include <stdio.h>
-#include <string.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <stdlib.h>
 #include <strings.h>
+#include <string.h>
 #include <sys/time.h>
 #include <sys/timeb.h>
 #include "total_control.h"
@@ -82,6 +87,86 @@ int get_milliseconds() {
   return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
 }
 
+typedef struct {
+  unsigned int version;
+  unsigned int timestamp;
+  int inst[3];
+  int avg[3];
+  unsigned int impact[3];
+  unsigned int impact_time;
+  unsigned int impact_hint;
+  unsigned int range;
+} acceldata;
+
+void* shm_ptr = NULL;
+
+void* connect_to_accelerometer(char* path) {
+  int size = sizeof(acceldata);
+  int shm_id;
+  FILE* fp;
+  key_t ipc_token;
+
+  ipc_token = ftok(path, 'R');
+  if (ipc_token == -1) {
+    return NULL;
+  }
+
+  shm_id = shmget(ipc_token, size, 0644 | IPC_CREAT);
+  if (shm_id == -1) {
+    return NULL;
+  }
+
+  shm_ptr = shmat(shm_id, NULL, SHM_RDONLY);
+  if (shm_ptr == (void*) -1) {
+    return NULL;
+  }
+
+  return shm_ptr;
+}
+
+float accel_x_center = 0;
+float accel_y_center = 0;
+float accel_x = 0, accel_y = 0;
+
+void read_accelerometer(char* filename, int frame) {
+  static int idle_count = 0;
+  static unsigned int last_timestamp = 0;
+
+  if (!shm_ptr || idle_count > 10) {
+    shm_ptr = connect_to_accelerometer(filename);
+  }
+  if (shm_ptr) {
+    acceldata* accel = (acceldata*) shm_ptr;
+    unsigned int timestamp = accel->timestamp;
+    int x = accel->avg[0];
+    int y = accel->avg[1];
+
+    if (timestamp == last_timestamp) {
+      idle_count++;
+    }
+    last_timestamp = timestamp;
+
+    accel_x = 0;
+    accel_y = 0;
+    if (frame < 100) {
+      float weight = 1.0/(frame + 1);
+      accel_x_center = accel_x_center*(1.0 - weight) + x*weight;
+      accel_y_center = accel_y_center*(1.0 - weight) + y*weight;
+    } else {
+      accel_x = x - accel_x_center;
+      accel_y = y - accel_y_center;
+    }
+  }
+}
+
+int accel_right() {
+  return (accel_x > 10 || accel_x < -10) ? accel_x : 0;
+}
+
+int accel_forward() {
+  return (accel_y > 10 || accel_y < -10) ? -accel_y : 0;
+}
+
 int main(int argc, char* argv[]) {
   int frame = 0;
   int start_time = get_milliseconds();
@@ -96,6 +181,7 @@ int main(int argc, char* argv[]) {
   tcl_init();
   tcl_set_clock_delay(clock_delay);
   while (1) {
+    read_accelerometer("/tmp/.accel", frame);
     while (now < next_frame_time) {
       now = get_milliseconds();
     }
@@ -107,8 +193,13 @@ int main(int argc, char* argv[]) {
     tf += (tf < 10);
     ti = (ti + 1) % 11;
     time_buffer[ti] = now;
-    printf("frame %d (%.1f fps)\r", frame,
+    printf("frame %d (%.1f fps) ", frame,
            tf*1000.0/(now - time_buffer[(ti + 11 - tf) % 11]));
+    if (accel_right() || accel_forward()) {
+      printf("forward%+3d right%+3d\n", accel_forward(), accel_right());
+    } else {
+      printf("\r");
+    }
     fflush(stdout);
 
     next_frame_time += 1000/FPS;
