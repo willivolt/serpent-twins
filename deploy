@@ -1,0 +1,12 @@
+#!/bin/bash
+
+while [ ! -d /Volumes/SERPENT/autorun ]; do
+  sleep 0.1
+done
+rm /Volumes/SERPENT/autorun/*
+cp *.c *.h *.pal /Volumes/SERPENT/autorun/
+cp autosh build play /Volumes/SERPENT/autorun/
+cp autorunner /Volumes/SERPENT/
+ls -al /Volumes/SERPENT/autorun/
+eject
+
