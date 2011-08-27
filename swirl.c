@@ -39,6 +39,7 @@ float velocity[NUM_ROWS];  // rev/s
 int auto_impulse = 1;
 float button_force = 30;
 float restore_factor = 1;
+float restore_center = 0;
 
 void set_hue(int row, int col, float hue) {
   set_from_palette(pixels, pixel_index(row, col), PALETTE, hue - floor(hue));
@@ -58,7 +59,7 @@ void tick(float dt) {
     if (i < NUM_ROWS - 1) {
       force += SPRING_CONSTANT * (position[i+1] - position[i]);
     }
-    force -= restore_factor * position[i];
+    force += restore_factor * (restore_center - position[i]);
     if (velocity[i] > FRICTION_MIN_VELOCITY) {
       force -= FRICTION_FORCE;
     } else if (velocity[i] < -FRICTION_MIN_VELOCITY) {
@@ -99,6 +100,11 @@ void next_frame(int x) {
   if (read_button('y')) {
     button_force = 30;
     restore_factor = 1;
+    double sum = 0;
+    for (int i = 0; i < NUM_ROWS; i++) {
+      sum += position[i];
+    }
+    restore_center = sum / NUM_ROWS;
   }
   
   for (int t = 0; t < TICKS_PER_FRAME; t++) {
