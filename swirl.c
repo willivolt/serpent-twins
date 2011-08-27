@@ -48,7 +48,8 @@ void tick(float dt) {
       if (auto_impulse) {
         continue;
       }
-      force = (read_button('b') - read_button('a'))*button_force;
+      force = accel_right() +
+          (read_button('b') - read_button('a'))*button_force;
     } else {
       force = SPRING_CONSTANT * (position[i-1] - position[i]);
     }
