@@ -46,7 +46,7 @@ void tick(float dt) {
   for (int i = 0; i < NUM_ROWS; i++) {
     float force;
     if (i == 0) {
-      force = accel_right() +
+      force = accel_right()*0.7 +
           (read_button('b') - read_button('a'))*button_force;
       if (force < -25 || force > 25) {
         auto_impulse = 0;
