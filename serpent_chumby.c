@@ -127,6 +127,13 @@ void* connect_to_accelerometer(char* path) {
 float accel_x_center = 0;
 float accel_y_center = 0;
 float accel_x = 0, accel_y = 0;
+#define ACCEL_HISTORY (30*FPS)
+int accel_x_history[ACCEL_HISTORY];
+int accel_y_history[ACCEL_HISTORY];
+int accel_x_sum = 0;
+int accel_y_sum = 0;
+int accel_sum_count = 0;
+int accel_i = 0;
 
 void read_accelerometer(char* filename, int frame) {
   static int idle_count = 0;
@@ -138,33 +145,42 @@ void read_accelerometer(char* filename, int frame) {
   if (shm_ptr) {
     acceldata* accel = (acceldata*) shm_ptr;
     unsigned int timestamp = accel->timestamp;
-    int x = accel->avg[0];
-    int y = accel->avg[1];
+    int x = accel->avg[0] - 2048;
+    int y = accel->avg[1] - 2048;
 
     if (timestamp == last_timestamp) {
       idle_count++;
     }
     last_timestamp = timestamp;
 
-    accel_x = 0;
-    accel_y = 0;
-    if (frame < 100) {
-      float weight = 1.0/(frame + 1);
-      accel_x_center = accel_x_center*(1.0 - weight) + x*weight;
-      accel_y_center = accel_y_center*(1.0 - weight) + y*weight;
+    if (accel_sum_count == ACCEL_HISTORY) {
+      accel_x_sum -= accel_x_history[accel_i];
+      accel_y_sum -= accel_y_history[accel_i];
+      accel_sum_count--;
+    }
+    accel_x_sum += x;
+    accel_y_sum += y;
+    accel_sum_count++;
+    accel_x_history[accel_i] = x;
+    accel_y_history[accel_i] = y;
+    accel_i = (accel_i + 1) % ACCEL_HISTORY;
+
+    if (frame < 5*FPS) {
+      accel_x = 0;
+      accel_y = 0;
     } else {
-      accel_x = x - accel_x_center;
-      accel_y = y - accel_y_center;
+      accel_x = x - accel_x_sum/accel_sum_count;
+      accel_y = y - accel_y_sum/accel_sum_count;
     }
   }
 }
 
 int accel_right() {
-  return (accel_x > 10 || accel_x < -10) ? accel_x : 0;
+  return (accel_x > 15 || accel_x < -15) ? accel_x : 0;
 }
 
 int accel_forward() {
-  return (accel_y > 10 || accel_y < -10) ? -accel_y : 0;
+  return (accel_y > 15 || accel_y < -15) ? -accel_y : 0;
 }
 
 int main(int argc, char* argv[]) {
