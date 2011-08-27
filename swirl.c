@@ -15,13 +15,12 @@
 // limitations under the License.
 
 #include <math.h>
+#include <stdlib.h>
 #include "serpent.h"
 #include "spectrum.pal"
 #include "sunset.pal"
 #define PALETTE SPECTRUM_PALETTE
 
-#define SINE_WAVE_AMPLITUDE 0.9
-#define SINE_WAVE_PERIOD 40
 #define DUTY_CYCLE_ON 120
 #define DUTY_CYCLE_OFF 120
 #define IMPULSE_START 100
@@ -30,8 +29,8 @@
 #define FPS 20
 #define SPRING_CONSTANT 400  // kg/s^2
 #define MASS 0.1  // kg
-#define FRICTION_FORCE 0.03  // kg*rev^2/s
-#define FRICTION_MIN_VELOCITY 0.01  // rev/s
+#define FRICTION_FORCE 0.05  // kg*rev^2/s
+#define FRICTION_MIN_VELOCITY 0.02  // rev/s
 
 unsigned char pixels[NUM_PIXELS*3];
 float position[NUM_ROWS];  // rev
@@ -40,16 +39,21 @@ int auto_impulse = 1;
 float button_force = 30;
 float restore_factor = 1;
 float restore_center = 0;
+float auto_impulse_period = 40;
+float auto_impulse_amplitude = 0.9;
 
 void tick(float dt) {
   for (int i = 0; i < NUM_ROWS; i++) {
     float force;
     if (i == 0) {
+      force = accel_right() +
+          (read_button('b') - read_button('a'))*button_force;
+      if (force < -25 || force > 25) {
+        auto_impulse = 0;
+      }
       if (auto_impulse) {
         continue;
       }
-      force = accel_right() +
-          (read_button('b') - read_button('a'))*button_force;
     } else {
       force = SPRING_CONSTANT * (position[i-1] - position[i]);
     }
@@ -84,9 +88,10 @@ void next_frame(int x) {
     float duty_phase = (x - IMPULSE_START) % (DUTY_CYCLE_ON + DUTY_CYCLE_OFF);
     if (x > IMPULSE_START && duty_phase < DUTY_CYCLE_ON) {
       position[0] = sin(
-          2*M_PI*(duty_phase/SINE_WAVE_PERIOD))*SINE_WAVE_AMPLITUDE;
-      button_force = 10;
-      restore_factor = 0;
+          2*M_PI*(duty_phase/auto_impulse_period))*auto_impulse_amplitude;
+    } else {
+      auto_impulse_period = (random() % 30) + 30;
+      auto_impulse_amplitude = (random() % 10)*0.1 + 0.5;
     }
   }
   if (read_button('a') || read_button('b')) {
