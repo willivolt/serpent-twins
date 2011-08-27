@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
   int next_frame_time = start_time + 1000/FPS;
   int now;
   int s, i;
-  int clock_delay = 20;
+  int clock_delay = 15;
   int time_buffer[11], ti = 0, tf = 0;
 
   bzero(head, (1 + HEAD_PIXELS)*3);
