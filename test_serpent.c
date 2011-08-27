@@ -100,18 +100,6 @@ void next_frame(int frame) {
     }
   }
   
-  if (read_button('x')) {
-    if (clock_delay < 200) clock_delay++;
-    printf("delay %d\n", clock_delay);
-    tcl_set_clock_delay(clock_delay);
-  }
-
-  if (read_button('y')) {
-    if (clock_delay > 0) clock_delay--;
-    printf("delay %d\n", clock_delay);
-    tcl_set_clock_delay(clock_delay);
-  }
-
   put_head_pixels(head, HEAD_PIXELS);
   for (s = 0; s < NUM_SEGS; s++) {
     put_segment_pixels(s, &(segments[s][0]), SEG_PIXELS);

@@ -85,11 +85,8 @@ colour render_grids[NUM_SEGS][(SEG_NK + 1)*SEG_NA];
 double blur[BLUR_WIDTH][BLUR_WIDTH];
 
 // Animation parameters
-double start_time;
 double next_frame_time;
 int frame = 0, paused = 0;
-
-#define FPS 20;
 
 
 vector compute_spine_point(int segment, double fraction) {
@@ -396,17 +393,32 @@ double get_time() {
   return now.tv_sec + 1e-6*now.tv_usec;
 }
 
+
+double time_buffer[11];
+int ti = 0, tf = 0;
+
 void idle(void) {
   if (!paused) {
     double now = get_time();
     if (now >= next_frame_time) {
-      next_frame(frame);
+      next_frame(frame++);
       update_render_grid();
       display();
-      next_frame_time += 1.0/FPS;
-      frame++;
-      printf("frame %d (%.1f fps)\r", frame, frame/(now - start_time));
+
+      now = get_time();
+      tf += (tf < 10);
+      ti = (ti + 1) % 11;
+      time_buffer[ti] = now;
+      printf("frame %d (%.1f fps)\r", frame,
+             tf/(now - time_buffer[(ti + 11 - tf) % 11]));
       fflush(stdout);
+
+      if (now > next_frame_time + 1.0) {
+        next_frame_time = now;
+        time_buffer[ti] = now;
+        tf = 0;
+      }
+      next_frame_time += 1.0/FPS;
     }
   }
 }
@@ -451,7 +463,8 @@ void init(void) {
     }
   }
 
-  next_frame_time = start_time = get_time();
+  time_buffer[0] = get_time();
+  next_frame_time = time_buffer[0] + 1.0/FPS;
 }
 
 /* The main public interface.  Implement next_frame() and call this. */
