@@ -17,7 +17,8 @@ while true; do
         rm -rf autobuilt autostart
         if [ -f autosh ]; then
             echo "Running autosh..."
-            bash autosh 2>&1 | tee /mnt/usb-*/autosh.out
+            bash autosh 2>&1 | tee autosh.out
+            cp autosh.out /mnt/usb-*/
         fi
         if [ -f autostart ]; then
             ls -al autostart

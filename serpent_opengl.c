@@ -334,21 +334,40 @@ void keyboard_up(unsigned char key, int x, int y) {
   }
 }
 
-static int accel_f = 0, accel_r = 0;
+static int accel_seq[8][10] = {
+  {30, 33, 29, 16, 10, 0, 44, -32, -10, 0},
+  {21, 23, 39, 0, 21, 28, -29, -27, -17, -14},
+  {29, 0, -16, -10, 0, 0, 0, 0, 0, 0},
+  {12, 18, 17, 10, 0, 0, -12, -27, 0, 0},
+  {18, 43, 35, -19, -37, -16, -32, -19, -11, 0},
+  {26, 43, 56, 33, 0, -35, -69, -46, -28, -10},
+  {13, 26, 38, 40, 36, 22, 0, -25, -57, -19},
+  {37, 48, 49, 26, 13, 0, -19, -36, -32, -18}
+};
+static int accel_f_start = -1, accel_f_dir, accel_f_seq;
+static int accel_r_start = -1, accel_r_dir, accel_r_seq;
 
 void special(int key, int x, int y) {
   switch (key) {
     case GLUT_KEY_UP:
-      accel_f = 15;
+      accel_f_start = frame;
+      accel_f_dir = 1;
+      accel_f_seq = random() % 8;
       break;
     case GLUT_KEY_DOWN:
-      accel_f = -15;
+      accel_f_start = frame;
+      accel_f_dir = -1;
+      accel_f_seq = random() % 8;
       break;
     case GLUT_KEY_LEFT:
-      accel_r = -15;
+      accel_r_start = frame;
+      accel_r_dir = -1;
+      accel_r_seq = random() % 8;
       break;
     case GLUT_KEY_RIGHT:
-      accel_r = 15;
+      accel_r_start = frame;
+      accel_r_dir = 1;
+      accel_r_seq = random() % 8;
       break;
   }
 }
@@ -357,11 +376,11 @@ void special_up(int key, int x, int y) {
   switch (key) {
     case GLUT_KEY_UP:
     case GLUT_KEY_DOWN:
-      accel_f = 0;
+      accel_f_start = -1;
       break;
     case GLUT_KEY_LEFT:
     case GLUT_KEY_RIGHT:
-      accel_r = 0;
+      accel_r_start = -1;
       break;
   }
 }
@@ -389,11 +408,25 @@ int read_button(int b) {
 }
 
 int accel_right() {
-  return accel_r;
+  if (accel_r_start >= 0) {
+    int offset = frame - accel_r_start;
+    if (offset >= 0 && offset < 10) {
+      return accel_seq[accel_r_seq][offset]*accel_r_dir;
+    }
+    accel_r_start = -1;
+  }
+  return 0;
 }
 
 int accel_forward() {
-  return accel_f;
+  if (accel_f_start >= 0) {
+    int offset = frame - accel_f_start;
+    if (offset >= 0 && offset < 10) {
+      return accel_seq[accel_f_seq][offset]*accel_f_dir;
+    }
+    accel_f_start = -1;
+  }
+  return 0;
 }
 
 void update_render_grid() {
