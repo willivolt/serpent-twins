@@ -26,3 +26,6 @@ void tcl_put_pixels_multi(byte** pixel_ptrs, int num_strands, int num_pixels);
 
 // Read a button (b = 1, 2, 3, or 4).
 byte tcl_read_button(byte b);
+
+// Adjust the SPI clock frequency.
+void tcl_set_clock_delay(byte delay_length);
