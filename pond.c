@@ -23,10 +23,10 @@
 #define NUM_COLS NUM_COLUMNS
 #define FRICTION_MIN_VELOCITY 0.02
 #define FRICTION_FORCE 10
-#define FPS 10
 #define TICKS_PER_FRAME 10
 #define DUTY_CYCLE_ON 1.0
 #define DUTY_CYCLE_PERIOD 10.0
+#define TIME_SPEEDUP 2
 
 unsigned char pixels[NUM_ROWS*NUM_COLS*3];
 float position[NUM_ROWS][NUM_COLS];
@@ -69,7 +69,7 @@ unsigned char env_map[2100];
 #define ENV_MAP SUNSET_PALETTE
 
 void next_frame(int f) {
-  float t = (float) f / FPS;
+  float t = TIME_SPEEDUP * (float) f / FPS;
   if (f == 0) {
     for (int e = 0; e < 400; e++) {
       env_map[e*3] = e/2;
@@ -110,7 +110,7 @@ void next_frame(int f) {
     position[NUM_ROWS - 1][j] = 0;
   }
   for (int t = 0; t < TICKS_PER_FRAME; t++) {
-    tick(1.0/FPS/TICKS_PER_FRAME);
+    tick(TIME_SPEEDUP * 1.0/FPS/TICKS_PER_FRAME);
   }
   for (int i = 0; i < NUM_ROWS; i++) {
     for (int j = 0; j < NUM_COLS; j++) {
