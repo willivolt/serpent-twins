@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
   int next_frame_time = start_time;
   int now;
   int s, i;
-  int clock_delay = 50;
+  int clock_delay = 20;
 
   bzero(head, (1 + HEAD_PIXELS)*3);
   bzero(segments, NUM_SEGS*(1 + SEG_PIXELS)*3);
@@ -114,14 +114,18 @@ int main(int argc, char* argv[]) {
       now = get_milliseconds();
     }
     if (read_button('a') && read_button('x') && read_button('y')) {
-      tcl_set_clock_delay(++clock_delay);
-      printf("\ndelay %d\n", clock_delay);
-      diagnostic_disco = 1;
+      if (clock_delay < 100) {
+        tcl_set_clock_delay(++clock_delay);
+        printf("\ndelay %d\n", clock_delay);
+        diagnostic_disco = 1;
+      }
     }
     if (read_button('b') && read_button('x') && read_button('y')) {
-      tcl_set_clock_delay(--clock_delay);
-      printf("\ndelay %d\n", clock_delay);
-      diagnostic_disco = 0;
+      if (clock_delay > 0) {
+        tcl_set_clock_delay(--clock_delay);
+        printf("\ndelay %d\n", clock_delay);
+        diagnostic_disco = 0;
+      }
     }
   }
 }
