@@ -29,7 +29,6 @@
 #define FPS 20
 #define SPRING_CONSTANT 400  // kg/s^2
 #define MASS 0.1  // kg
-#define FRICTION_FORCE 0.05  // kg*rev^2/s
 #define FRICTION_MIN_VELOCITY 0.02  // rev/s
 
 unsigned char pixels[NUM_PIXELS*3];
@@ -43,6 +42,9 @@ float auto_impulse_period = 40;
 float auto_impulse_amplitude = 0.9;
 
 void tick(float dt) {
+  float friction_force = 0.05 + read_button('y')*0.2;
+  float friction_min_velocity = friction_force/MASS * dt;
+
   for (int i = 0; i < NUM_ROWS; i++) {
     float force;
     if (i == 0) {
@@ -61,10 +63,10 @@ void tick(float dt) {
       force += SPRING_CONSTANT * (position[i+1] - position[i]);
     }
     force += restore_factor * (restore_center - position[i]);
-    if (velocity[i] > FRICTION_MIN_VELOCITY) {
-      force -= FRICTION_FORCE;
-    } else if (velocity[i] < -FRICTION_MIN_VELOCITY) {
-      force += FRICTION_FORCE;
+    if (velocity[i] > friction_min_velocity) {
+      force -= friction_force;
+    } else if (velocity[i] < -friction_min_velocity) {
+      force += friction_force;
     }
     velocity[i] += force/MASS * dt;
   }
