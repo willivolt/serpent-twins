@@ -283,7 +283,15 @@ void motion(int x, int y) {
   }
 }
 
-static int button_state = 0;
+static int button_bits = 0;
+static char button_name[5] = " yabx";
+static int button_state[5] = {0, 0, 0, 0, 0};
+static int last_button_read[5] = {0, 0, 0, 0, 0};
+static int last_button_sequence_time = 0;
+static char button_sequence[10] = "";
+static int button_sequence_i = 0;
+static int pressed_button = 0;
+static int pressed_button_count = 0;
 
 void keyboard(unsigned char key, int x, int y) {
   switch (key) {
@@ -296,19 +304,19 @@ void keyboard(unsigned char key, int x, int y) {
       break;
     case 'y':
     case '1':
-      button_state |= 1;
+      button_bits |= 1;
       break;
     case 'a':
     case '2':
-      button_state |= 2;
+      button_bits |= 2;
       break;
     case 'b':
     case '3':
-      button_state |= 4;
+      button_bits |= 4;
       break;
     case 'x':
     case '4':
-      button_state |= 8;
+      button_bits |= 8;
       break;
   }
 }
@@ -317,21 +325,43 @@ void keyboard_up(unsigned char key, int x, int y) {
   switch (key) {
     case 'y':
     case '1':
-      button_state &= ~1;
+      button_bits &= ~1;
       break;
     case 'a':
     case '2':
-      button_state &= ~2;
+      button_bits &= ~2;
       break;
     case 'b':
     case '3':
-      button_state &= ~4;
+      button_bits &= ~4;
       break;
     case 'x':
     case '4':
-      button_state &= ~8;
+      button_bits &= ~8;
       break;
   }
+}
+
+void update_buttons() {
+  pressed_button = 0;
+  pressed_button_count = 0;
+  int mask = 1;
+  for (int b = 1; b <= 4; b++) {
+    int state = (button_bits & mask) ? 1 : 0;
+    mask <<= 1;
+    if (state == last_button_read[b]) {  // debounce
+      button_state[b] = state;
+      if (state) {
+        pressed_button = b;
+      }
+    }
+    last_button_read[b] = state;
+    pressed_button_count += button_state[b];
+  }
+}
+
+const char* get_button_sequence() {
+  return button_sequence;
 }
 
 static int accel_seq[8][10] = {
@@ -390,19 +420,19 @@ int read_button(char b) {
     case 'Y':
     case 'y':
     case 1:
-      return (button_state & 1) ? 1 : 0;
+      return button_state[1];
     case 'A':
     case 'a':
     case 2:
-      return (button_state & 2) ? 1 : 0;
+      return button_state[2];
     case 'B':
     case 'b':
     case 3:
-      return (button_state & 4) ? 1 : 0;
+      return button_state[3];
     case 'X':
     case 'x':
     case 4:
-      return (button_state & 8) ? 1 : 0;
+      return button_state[4];
   }
   return 0;
 }
@@ -469,6 +499,7 @@ double get_time() {
 
 double time_buffer[11];
 int ti = 0, tf = 0;
+int last_button_count = 0;
 
 void idle(void) {
   if (!paused) {
@@ -482,8 +513,13 @@ void idle(void) {
       tf += (tf < 10);
       ti = (ti + 1) % 11;
       time_buffer[ti] = now;
-      printf("frame %d (%.1f fps) ", frame,
-             tf/(now - time_buffer[(ti + 11 - tf) % 11]));
+      printf("frame %5d (%.1f fps)  %c%c%c%c  [%-10s]  ", frame,
+             tf/(now - time_buffer[(ti + 11 - tf) % 11]),
+             read_button('a') ? 'a' : ' ',
+             read_button('b') ? 'b' : ' ',
+             read_button('x') ? 'x' : ' ',
+             read_button('y') ? 'y' : ' ',
+             button_sequence);
       if (accel_right() || accel_forward()) {
         printf("forward%+3d right%+3d\n", accel_forward(), accel_right());
       } else {
@@ -497,6 +533,21 @@ void idle(void) {
         tf = 0;
       }
       next_frame_time += 1.0/FPS;
+
+      update_buttons();
+      if (last_button_count == 0 && pressed_button_count == 1) {
+        if (button_sequence_i < 10) {
+          button_sequence[button_sequence_i++] = button_name[pressed_button];
+          button_sequence[button_sequence_i] = 0;
+          last_button_sequence_time = now;
+        }
+      }
+      last_button_count = pressed_button_count;
+      if (button_name[pressed_button] == 'y' ||
+          now - last_button_sequence_time > 10) {  // cancel
+        button_sequence_i = 0;
+        button_sequence[0] = 0;
+      }
     }
   }
 }
