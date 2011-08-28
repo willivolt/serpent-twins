@@ -103,14 +103,15 @@ void hsv_to_rgb(byte hue, byte sat, byte val, pixel* pix) {
 int DH_OPTIONS[7] = {-127, -85, -43, 0, 43, 85, 127};
 
 static double h1, s1, v1, dh, s2, v2;
-static double goal_h1 = 0, goal_s1 = 1, goal_v1 = 1;
-static double goal_dh = 0, goal_s2 = 1, goal_v2 = 1;
+static double goal_h1 = 0, goal_s1 = 1, goal_v1 = 0.5;
+static double goal_dh = 0.5, goal_s2 = 0.5, goal_v2 = 1;
 static double progress;
 static int last_selected;
 static double speed;
 static double breath_phase = 0;
 static double breath_speed = 0.001;
 static int sub_frame = -1;
+static double tilt = 0;
 
 void select_goal(int f) {
   h1 = goal_h1;
@@ -140,12 +141,17 @@ void select_goal(int f) {
 
 void next_frame(int f) {
   if (f == 0) {
-    select_goal(f);
-  }
-  if (f == 0) {
     for (int i = 0; i < 256; i++) {
       sin_table[i] = sin(i/256.0*2*M_PI);
     }
+    select_goal(0);
+  }
+
+  int tilt_now = accel_right();
+  if (tilt > 0 && tilt_now > tilt || tilt < 0 && tilt_now < tilt) {
+    tilt = tilt*0.7 + tilt_now*0.3;
+  } else {
+    tilt = tilt*0.95 + tilt_now*0.05;
   }
 
   if (read_button(1)) {
@@ -156,7 +162,6 @@ void next_frame(int f) {
   }
 
   pixel hp, tp;
-
   byte h = h1 + progress*(goal_h1 - h1);
   byte s = s1 + progress*(goal_s1 - s1);
   byte v = v1 + progress*(goal_v1 - v1);
@@ -189,12 +194,17 @@ void next_frame(int f) {
         gi = gi*(1-pp) + plasma[i*3 + 1]*pp;
         bi = bi*(1-pp) + plasma[i*3 + 2]*pp;
       }
-      set_rgb(pixels, i, clamp(ri), clamp(gi), clamp(bi));
+      //set_rgb(pixels, i, clamp(ri), clamp(gi), clamp(bi));
+      int sat_bias = -128 * cos(((float) c/NUM_COLUMNS + tilt*0.02) * 2 * M_PI);
+      hsv_to_rgb(h, clamp(s + sat_bias), v, ((pixel*) pixels) + i);
     }
   }
   for (int s = 0; s < NUM_SEGS; s++) {
     put_segment_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
   }
+
+  // #182 is first pixel in outer left eye
+  // #204 is first pixel in inner left eye
 
   for (int i = 0; i < HEAD_PIXELS; i++) {
     if (i >  2 + 28 + 28 + 71 + 39 + 14 &&
