@@ -480,7 +480,7 @@ void next_frame(int frame) {
       time_to_next_pattern--;
     } else {
       activate_pattern(PATTERNS + random() % NUM_PATTERNS);
-      time_to_next_pattern = 60*SEC;
+      time_to_next_pattern = 10*SEC;
     }
   }
 
