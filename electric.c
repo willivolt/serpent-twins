@@ -17,16 +17,24 @@
 #include <stdlib.h>
 #include "serpent.h"
 
-#define LOCI 200
-static int inv_velocity[LOCI];
-static int inv_omega[LOCI];
-static int t_not[LOCI];
+#define ELECTRIC_LOCI 200
 
 static unsigned char pixels[9000];
 
-void draw_locus(int x, int orientation);
+void electric_draw_locus(int x, int orientation, byte* pixels) {
+  int i;
+
+  for(i=(x*25+orientation)*3;i<(x*25+25)*3;i+=9) {
+    pixels[i]=0x80;
+    pixels[i+1]=0x00;
+    pixels[i+2]=0xff;
+  }
+}
 
 void next_frame(int frame) {
+  static int inv_velocity[ELECTRIC_LOCI];
+  static int inv_omega[ELECTRIC_LOCI];
+  static int t_not[ELECTRIC_LOCI];
   static int nnext=0;
   static int nmax=0;
   int i;
@@ -39,9 +47,9 @@ void next_frame(int frame) {
     t_not[nnext]=frame;
 
     nnext++;
-    if(nnext==LOCI) nnext=0;
+    if(nnext==ELECTRIC_LOCI) nnext=0;
 
-    if(nmax<LOCI) {
+    if(nmax<ELECTRIC_LOCI) {
       nmax++;
     }
   }
@@ -53,22 +61,11 @@ void next_frame(int frame) {
   for(i=0;i<nmax;i++) {
     posx=(frame-t_not[i])/inv_velocity[i]%120;
     orientation=(frame-t_not[i])/inv_omega[i]%3;
-    draw_locus(posx,orientation);
+    electric_draw_locus(posx,orientation,pixels);
   }
 
   for(int s = 0; s<10; s++) {
     put_segment_pixels(s, &pixels[s*900], 300);
   }
 }
-
-void draw_locus(int x, int orientation) {
-  int i;
-
-  for(i=(x*25+orientation)*3;i<(x*25+25)*3;i+=9) {
-    pixels[i]=0x80;
-    pixels[i+1]=0x00;
-    pixels[i+2]=0xff;
-  }
-}
-
 
