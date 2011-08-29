@@ -75,5 +75,6 @@ void put_segment_pixels(int segment, byte* pixels, int n);
 void next_frame(int frame);
 int read_button(char b);  // 'a', 'b', 'x', or 'y'
 const char* get_button_sequence();
+void clear_button_sequence();
 int accel_right();
 int accel_forward();
