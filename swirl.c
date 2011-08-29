@@ -75,7 +75,10 @@ void tick(float dt) {
   }
 }
 
-static int clock_delay = 0;
+static int left_outer_eye_start = 182;
+static int right_outer_eye_start = 182 + 22 + 13 + 12 + 6;
+static int outer_eye_length = 22;
+static int inner_eye_length = 13;
 
 void next_frame(int x) {
   if (x == 0) {
@@ -124,8 +127,36 @@ void next_frame(int x) {
     }
   }
 
-  put_head_pixels(pixels, HEAD_PIXELS);
   for (int s = 0; s < 10; s++) {
     put_segment_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
   }
+
+  if (strcmp(get_button_sequence(), "xxaxa") == 0) {
+    left_outer_eye_start -= 1;
+    clear_button_sequence();
+  }
+  if (strcmp(get_button_sequence(), "xxaxb") == 0) {
+    left_outer_eye_start += 1;
+    clear_button_sequence();
+  }
+  if (strcmp(get_button_sequence(), "xxbxa") == 0) {
+    right_outer_eye_start -= 1;
+    clear_button_sequence();
+  }
+  if (strcmp(get_button_sequence(), "xxbxb") == 0) {
+    right_outer_eye_start += 1;
+    clear_button_sequence();
+  }
+
+  // overwrite the eyes
+  pixel* p = (pixel*) pixels;
+  for (int i = 0; i < outer_eye_length; i++) {
+    p[left_outer_eye_start + i] = p[0];
+    p[right_outer_eye_start + i] = p[0];
+  }
+  for (int i = 0; i < inner_eye_length; i++) {
+    p[left_outer_eye_start + outer_eye_length + i] = p[NUM_PIXELS - 1];
+    p[right_outer_eye_start + outer_eye_length + i] = p[NUM_PIXELS - 1];
+  }
+  put_head_pixels(pixels, HEAD_PIXELS);
 }
