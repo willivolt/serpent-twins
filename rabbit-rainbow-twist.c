@@ -21,19 +21,13 @@
 #include "serpent.h"
 
 float sin_table[256];
-#define PI 3.14159
-#define TWOPI (2*3.14159)
 #define SIN(n) sin_table[((int) ((n)*256)) & 0xff]
 #define COS(n) sin_table[(((int) ((n)*256)) + 64) & 0xff]
 
 // this scales the brightness of all the pixels.  255 is default
-#define MAX_BRIGHT 255
+#define RABBIT_MAX_BRIGHT 255
 
-#define NSEGS 10
-#define AROUND 25
-#define LONG 12
-#define NPIXELS (NSEGS*AROUND*LONG)
-unsigned char pixels[3*NPIXELS];
+unsigned char pixels[3*NUM_PIXELS];
 
 float max(float a, float b) {
     if (a > b) {return a;}
@@ -51,7 +45,7 @@ void next_frame(int frame) {
     // PREPARE SIN TABLE
     if (frame == 0) {
         for (int i = 0; i < 256; i++) {
-            sin_table[i] = sin(i/256.0*TWOPI);
+            sin_table[i] = sin(i/256.0*2*M_PI);
         }
     }
 
@@ -75,7 +69,7 @@ void next_frame(int frame) {
     float maxx, minn, avg;
 
     float black_thresh = 0.5;
-    black_thresh = (SIN(frame*0.0039/TWOPI)/2+0.5) *0.5+0.05;
+    black_thresh = (SIN(frame*0.0039/(2*M_PI))/2+0.5) *0.5+0.05;
 
     // color movement and thin black ring movement
     float secondsPerSpin = 2;
@@ -101,32 +95,32 @@ void next_frame(int frame) {
     //twist = sin(frame*0.01) * 0.5 + 1;
 
     // distortion of thin black rings
-    float twirl1 = 0.25/AROUND; 
-    float twirl2 = 0.25/AROUND;
+    float twirl1 = 0.25/NUM_COLUMNS; 
+    float twirl2 = 0.25/NUM_COLUMNS;
     twirl1 = sin(frame*0.0143) * 0.22 + 0.25;
-    twirl1 /= AROUND;
+    twirl1 /= NUM_COLUMNS;
     twirl2 = sin(frame*0.01 + 0.123) * 0.22 + 0.25;
-    twirl2 /= AROUND;
+    twirl2 /= NUM_COLUMNS;
 
 
 
-    for (int i = 0; i < NPIXELS; i++) {
+    for (int i = 0; i < NUM_PIXELS; i++) {
         //-------------------------------------------
         // RADIAL COORDINATES
-        x = (i % AROUND);  // theta.  0 to 24
-        y = (i / AROUND);  // along cylinder.  0 to NSEGS*LONG (120)
-        seg = y / LONG;
+        x = (i % NUM_COLUMNS);  // theta.  0 to 24
+        y = (i / NUM_COLUMNS);  // along cylinder.  0 to NUM_SEGS*NUM_ROWS (120)
+        seg = y / SEG_ROWS;
         if (y % 2 == 1) {
-            x = (AROUND-1)-x;  // reverse every other row
+            x = (NUM_COLUMNS-1)-x;  // reverse every other row
         }
 
-        twisted_x = (int)(x + y*twist) % AROUND;
-        is_on_bottom = (twisted_x < AROUND/2);
+        twisted_x = (int)(x + y*twist) % NUM_COLUMNS;
+        is_on_bottom = (twisted_x < NUM_COLUMNS/2);
 
         // COLOR MOVEMENT
         offset = frame * moveSpeed;
-        pct1 = (y*1.0 + twisted_x*3) / (NSEGS*LONG);
-        pct2 = (y*1.0) / (NSEGS*LONG);
+        pct1 = (y*1.0 + twisted_x*3) / (NUM_SEGS*SEG_ROWS);
+        pct2 = (y*1.0) / (NUM_SEGS*SEG_ROWS);
         pct3 = pct2;
 
         if (is_on_bottom == 1) {
@@ -145,8 +139,8 @@ void next_frame(int frame) {
         //bf = (bf-1.0)*1.2 + 1.0;
 
         // BLACK STRIPE
-        if (   ( (twisted_x + 1           ) % AROUND < black_stripe_width )  ||
-               ( (twisted_x + 1 + AROUND/2) % AROUND < black_stripe_width )      ) {
+        if (   ( (twisted_x + 1           ) % NUM_COLUMNS < black_stripe_width )  ||
+               ( (twisted_x + 1 + NUM_COLUMNS/2) % NUM_COLUMNS < black_stripe_width )      ) {
             brightness = 0;
         } else {
             // SMALL BRIGHTNESS PULSES
@@ -190,15 +184,15 @@ void next_frame(int frame) {
         }
 
         // BOOKKEEPING
-        r = rf * MAX_BRIGHT;
-        g = gf * MAX_BRIGHT;
-        b = bf * MAX_BRIGHT;
+        r = rf * RABBIT_MAX_BRIGHT;
+        g = gf * RABBIT_MAX_BRIGHT;
+        b = bf * RABBIT_MAX_BRIGHT;
         if (r < 0) { r = 0; }
-        if (r > MAX_BRIGHT) { r = MAX_BRIGHT; }
+        if (r > RABBIT_MAX_BRIGHT) { r = RABBIT_MAX_BRIGHT; }
         if (g < 0) { g = 0; }
-        if (g > MAX_BRIGHT) { g = MAX_BRIGHT; }
+        if (g > RABBIT_MAX_BRIGHT) { g = RABBIT_MAX_BRIGHT; }
         if (b < 0) { b = 0; }
-        if (b > MAX_BRIGHT) { b = MAX_BRIGHT; }
+        if (b > RABBIT_MAX_BRIGHT) { b = RABBIT_MAX_BRIGHT; }
         pixels[i*3] = r;
         pixels[i*3 + 1] = g;
         pixels[i*3 + 2] = b;
