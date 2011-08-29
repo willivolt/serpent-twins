@@ -18,18 +18,17 @@
 #include "serpent.h"
 
 #define RIPPLES 10
-static int posx[RIPPLES];
-static int posy[RIPPLES];
-static int radius[RIPPLES];
-static unsigned char red[RIPPLES];
-static unsigned char green[RIPPLES];
-static unsigned char blue[RIPPLES];
 
 static unsigned char pixels[9000];
 
-int pixel_red(int x, int y);
-
 void next_frame(int frame) {
+  static int posx[RIPPLES];
+  static int posy[RIPPLES];
+  static int radius[RIPPLES];
+  static unsigned char red[RIPPLES];
+  static unsigned char green[RIPPLES];
+  static unsigned char blue[RIPPLES];
+
   static int nnext=0;
   static int nmax=0;
   int i,j,k;
@@ -82,7 +81,7 @@ void next_frame(int frame) {
       for(i=0;i<120;i++) {
         distance = (posx[k]-i)*(posx[k]-i)+(posy[k]-j)*(posy[k]-j);
         if(distance>=rmin && distance<=rmax) {
-          pixnum = pixel_red(i,j%25);
+          pixnum = pixel_index(i,j%25)*3;
           if(255-pixels[pixnum]<red[k]) {
            pixels[pixnum]=255;
           }
@@ -114,16 +113,4 @@ void next_frame(int frame) {
   for(int s = 0; s<10; s++) {
     put_segment_pixels(s, &pixels[s*900], 300);
   }
-}
-
-int pixel_red(int x, int y) {
-  return (x*25+y)*3;
-}
-
-int pixel_green(int x, int y) {
-  return (x*25+y)*3+1;
-}
-
-int pixel_blue(int x, int y) {
-  return (x*25+y)*3+2;
 }
