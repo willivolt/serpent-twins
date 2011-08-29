@@ -69,8 +69,9 @@ long __value;
 byte ease[257];
 #define EASE(frame, period) ease[((frame) << 8) / (period)]
 
-float sin_table[512];
-#define SIN(n) sin_table[((short) (n*2)) & 0x1ff]
+float sin_table[256];
+#define SIN(n) sin_table[((int) (n)) & 0xff]
+#define COS(n) sin_table[((int) (n) + 0x40) & 0xff]
 
 void init_tables() {
   short i;
@@ -78,8 +79,8 @@ void init_tables() {
   for (i = 0; i <= 256; i++) {
     ease[i] = ((tanh(-2.56 + i*0.02)-min)/span)*255 + 0.5;
   }
-  for (i = 0; i < 512; i++) {
-    sin_table[i] = sin(i/512.0*2*M_PI);
+  for (i = 0; i < 256; i++) {
+    sin_table[i] = sin(i/256.0*2*M_PI);
   }
 }
 
@@ -279,6 +280,149 @@ byte swirl_next_frame(pattern* p, pixel* pixels) {
   return 1;
 }
 
+
+// Rabbit-Sine pattern =====================================================
+
+#define RABBIT_MAX_BRIGHT 255
+
+byte rabbit_sine_next_frame(pattern* p, pixel* pixels) {
+    int frame = p->frame;
+    short alpha = get_alpha_or_terminate(frame, 60*SEC, 10*SEC);
+
+    int r,g,b,temp;
+
+    // coordinates
+    int x,y;         // x is around, y is along
+    float alt;       // altitude of each point, from -1 to 1
+    int seg;         // which trailer?
+
+    // scalar field values
+    float sin_small;
+    float sin_large;
+    float bright;
+
+    // movement and look
+    float wavelength_small = 12.0;
+    float wavelength_large = 64.0;
+    float time_offset_small = -frame*0.5;  // larger number == faster movement
+    float time_offset_large = frame*0.9;
+    float black_stripe_width = 0.8; // width of black stripe between colors
+    
+
+    for (int i = 0; i < 300*NUM_SEGS; i++) {
+        //-------------------------------------------
+        // RADIAL COORDINATES
+        x = (i % NUM_COLUMNS);  // theta.  0 to 24
+        y = (i / NUM_COLUMNS);  // along cylinder.  0 to NUM_SEGS*SEG_ROWS (120)
+        seg = y / SEG_ROWS;
+        // reverse every other row
+        if (y % 2 == 1) {
+            x = (NUM_COLUMNS-1)-x;
+        }
+        
+        // rotate 90 degrees to one side
+        //x = (x + NUM_COLUMNS/4) % NUM_COLUMNS;
+
+        // twist like a candy cane
+        //x = (x + y*0.6);
+        //x = x % NUM_COLUMNS;
+
+        // spin like a rolling log
+        //x = (x + frame) % NUM_COLUMNS;
+
+        //-------------------------------------------
+        // ALTITUDE
+//        alt = -cos(   x/(NUM_COLUMNS-1.0) * 2*M_PI   );
+        alt = -COS(   x/(NUM_COLUMNS-1.0) * 256   );
+
+        //-------------------------------------------
+        // BRIGHTNESS
+
+        // combine two sine waves along the length of the snake with the altitude at each point
+        sin_small = SIN(   (time_offset_small + y) / wavelength_small * 256   );
+        sin_large = SIN(   (time_offset_large + y) / wavelength_large * 256   );
+//        sin_small = sin(   (time_offset_small + y) / wavelength_small * 2*M_PI   );
+//        sin_large = sin(   (time_offset_large + y) / wavelength_large * 2*M_PI   );
+        bright = (sin_small*0.5 + sin_large*0.7)*0.7 + alt*0.5;
+
+        // increase contrast and invert
+        bright *= -2.0;
+
+        //-------------------------------------------
+        // CONVERT BRIGHTNESS TO COLOR
+
+        // put a stripe down the middle of the black part
+        if (0 && (-black_stripe_width < bright) && (bright < black_stripe_width)) {
+            if (bright < 0) { bright = -bright; }
+            bright = bright / black_stripe_width;
+            bright = 1-bright;
+            bright = (bright - 0.8) / (1-0.8);
+            r = bright * 1.0 * RABBIT_MAX_BRIGHT;
+            g = bright * 0.0 * RABBIT_MAX_BRIGHT;
+            b = bright * 2.0 * RABBIT_MAX_BRIGHT;
+        } else {
+            if (bright > 0) {
+                // blue part for positive brightness
+                bright = bright - black_stripe_width;
+                r = bright * 0.1 * RABBIT_MAX_BRIGHT;
+                g = bright * 0.5 * RABBIT_MAX_BRIGHT;
+                b = bright * 2.0 * RABBIT_MAX_BRIGHT;
+            } else {
+                // orange part for negative brightness
+                bright = -bright - black_stripe_width;
+                r = bright * 2.0 * RABBIT_MAX_BRIGHT;
+                g = bright * 0.5 * RABBIT_MAX_BRIGHT;
+                b = bright * 0.1 * RABBIT_MAX_BRIGHT;
+            }
+        }
+
+        
+        //-------------------------------------------
+        // SHIFT COLORS ON EACH SEGMENT
+        //if (seg%6 == 1) {
+        //    temp = r;
+        //    r = g;
+        //    g = b;
+        //    b = temp;
+        //}
+        //if (seg%6 == 2) {
+        //    temp = r;
+        //    r = b;
+        //    b = g;
+        //    g = temp;
+        //}
+        //if (seg%6 == 3) {
+        //    temp = r;
+        //    r = g;
+        //    g = temp;
+        //}
+        //if (seg%6 == 4) {
+        //    temp = r;
+        //    r = b;
+        //    b = temp;
+        //}
+        //if (seg%6 == 5) {
+        //    temp = b;
+        //    b = g;
+        //    g = temp;
+        //}
+
+
+        //-------------------------------------------
+        // STORE RESULT
+        if (r < 0) { r = 0; }
+        if (r > RABBIT_MAX_BRIGHT) { r = RABBIT_MAX_BRIGHT; }
+        if (g < 0) { g = 0; }
+        if (g > RABBIT_MAX_BRIGHT) { g = RABBIT_MAX_BRIGHT; }
+        if (b < 0) { b = 0; }
+        if (b > RABBIT_MAX_BRIGHT) { b = RABBIT_MAX_BRIGHT; }
+        paint_rgb(pixels, i, r, g, b, alpha);
+    }
+
+    return 1;
+}
+
+
 // Flash pattern ===========================================================
 
 byte flash_next_frame(pattern* p, pixel* pixels) {
@@ -292,10 +436,11 @@ byte flash_next_frame(pattern* p, pixel* pixels) {
 
 pattern BASE_PATTERN = {"base", base_next_frame, 0};
 
-#define NUM_PATTERNS 1
+#define NUM_PATTERNS 2
 pattern PATTERNS[] = {
 //  {plasma_next_frame, 0},
-  {"swirl", swirl_next_frame, 0}
+  {"swirl", swirl_next_frame, 0},
+  {"rabbit-sine", rabbit_sine_next_frame, 0}
 };
 
 
