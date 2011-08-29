@@ -1,1 +1,1 @@
-./build test_serpent && cp bin/test_serpent autostart
+./build swirl && cp bin/swirl autostart
