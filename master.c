@@ -96,21 +96,22 @@ struct pattern {
 };
 typedef struct pattern pattern;
 
-short transition_alpha(long frame, long duration, long transition_period) {
-  if (frame > transition_period + duration + transition_period) {
+short transition_alpha(
+    long frame, long in_period, long duration, long out_period) {
+  if (frame > in_period + duration + out_period) {
     return -1;
   }
-  if (frame > transition_period + duration) {
-    return 256 - EASE(frame - transition_period - duration, transition_period);
+  if (frame > in_period + duration) {
+    return 256 - EASE(frame - in_period - duration, out_period);
   }
-  if (frame < transition_period) {
-    return EASE(frame, transition_period);
+  if (frame < in_period) {
+    return EASE(frame, in_period);
   }
   return 256;
 }
 
-#define get_alpha_or_terminate(frame, duration, transition_duration) \
-  (__alpha = transition_alpha(frame, duration, transition_duration)); \
+#define get_alpha_or_terminate(frame, in_period, duration, out_period) \
+  (__alpha = transition_alpha(frame, in_period, duration, out_period)); \
   if (__alpha < 0) return 0;
 
 
@@ -139,18 +140,18 @@ void base_select_target(pixel* target_pixels) {
 byte base_next_frame(pattern* p, pixel* pixels) {
   static pixel source_pixels[NUM_PIXELS];
   static pixel target_pixels[NUM_PIXELS];
-  static long stop_frame = 0;
-  static long transition_period = 0;
+  static long in_period = 0;
+  static long duration = 0;
   short alpha;
 
-  if (p->frame < stop_frame) {
-    alpha = transition_alpha(p->frame, stop_frame, transition_period);
+  if (p->frame < in_period + duration) {
+    alpha = transition_alpha(p->frame, in_period, duration, 1);
   } else {
     memcpy(source_pixels, target_pixels, NUM_PIXELS*3);
     base_select_target(target_pixels);
     p->frame = 0;
-    transition_period = 1*SEC + random() % (20*SEC);
-    stop_frame = transition_period + random() % (40*SEC);
+    in_period = 1*SEC + random() % (20*SEC);
+    duration = random() % (40*SEC);
     alpha = 0;
   }
 
@@ -163,7 +164,7 @@ byte base_next_frame(pattern* p, pixel* pixels) {
 }
 
 
-// Swirl pattern ===========================================================
+// "swirl", by Ka-Ping Yee =================================================
 
 #include "spectrum.pal"
 #include "sunset.pal"
@@ -222,7 +223,7 @@ void swirl_tick(float dt) {
 
 byte swirl_next_frame(pattern* p, pixel* pixels) {
   int x = p->frame;
-  short alpha = get_alpha_or_terminate(x, 60*SEC, 10*SEC);
+  short alpha = get_alpha_or_terminate(x, 3*SEC, 2*60*SEC, 10*SEC);
 
   static int left_outer_eye_start = 182;
   static int right_outer_eye_start = 182 + 22 + 13 + 12 + 6;
@@ -281,13 +282,13 @@ byte swirl_next_frame(pattern* p, pixel* pixels) {
 }
 
 
-// Rabbit-Sine pattern =====================================================
+// "rabbit-sine", by David Rabbit Wallace ==================================
 
 #define RABBIT_MAX_BRIGHT 255
 
 byte rabbit_sine_next_frame(pattern* p, pixel* pixels) {
     int frame = p->frame;
-    short alpha = get_alpha_or_terminate(frame, 60*SEC, 10*SEC);
+    short alpha = get_alpha_or_terminate(frame, 10*SEC, 60*SEC, 10*SEC);
 
     int r,g,b,temp;
 
@@ -423,6 +424,71 @@ byte rabbit_sine_next_frame(pattern* p, pixel* pixels) {
 }
 
 
+// "electric", by Christopher De Vries =====================================
+
+#define ELECTRIC_LOCI 200
+
+void electric_draw_locus(int x, int orientation, byte* pixels) {
+  int i;
+
+  for(i=(x*25+orientation)*3;i<(x*25+25)*3;i+=9) {
+    pixels[i]=0x80;
+    pixels[i+1]=0x00;
+    pixels[i+2]=0xff;
+  }
+}
+
+byte electric_next_frame(pattern* p, pixel* pixels) {
+  static int inv_velocity[ELECTRIC_LOCI];
+  static int inv_omega[ELECTRIC_LOCI];
+  static int t_not[ELECTRIC_LOCI];
+  static int nnext=0;
+  static int nmax=0;
+  static byte temp_pixels[NUM_PIXELS*3];
+  int i;
+  int posx;
+  int orientation;
+
+  short alpha = get_alpha_or_terminate(p->frame, 1*SEC, 2*60*SEC, 10*SEC);
+  int frame = p->frame - 9*SEC;
+
+  for(i=0;i<9000;i++) {
+    temp_pixels[i]=0;
+  }
+
+  if (frame>=0) {
+    if(frame%10==0) {
+      inv_velocity[nnext]=1000/(frame%1000+1);
+      inv_omega[nnext]=333/(frame%333+1);
+      t_not[nnext]=frame;
+ 
+      nnext++;
+      if(nnext==ELECTRIC_LOCI) nnext=0;
+ 
+      if(nmax<ELECTRIC_LOCI) {
+        nmax++;
+      }
+    }
+ 
+    for(i=0;i<nmax;i++) {
+      posx=(frame-t_not[i])/inv_velocity[i]%120;
+      orientation=(frame-t_not[i])/inv_omega[i]%3;
+      electric_draw_locus(posx,orientation,temp_pixels);
+    }
+  }
+
+  byte* t = temp_pixels;
+  for(i=0;i<NUM_PIXELS;i++) {
+    byte r = *(t++);
+    byte g = *(t++);
+    byte b = *(t++);
+    paint_rgb(pixels, i, r, g, b, alpha); 
+  }
+
+  return 1;
+}
+
+
 // Flash pattern ===========================================================
 
 byte flash_next_frame(pattern* p, pixel* pixels) {
@@ -436,11 +502,12 @@ byte flash_next_frame(pattern* p, pixel* pixels) {
 
 pattern BASE_PATTERN = {"base", base_next_frame, 0};
 
-#define NUM_PATTERNS 2
+#define NUM_PATTERNS 3
 pattern PATTERNS[] = {
 //  {plasma_next_frame, 0},
   {"swirl", swirl_next_frame, 0},
-  {"rabbit-sine", rabbit_sine_next_frame, 0}
+  {"rabbit-sine", rabbit_sine_next_frame, 0},
+  {"electric", electric_next_frame, 0},
 };
 
 
@@ -460,6 +527,7 @@ void next_frame(int frame) {
   static int right_outer_eye_start = 182 + 22 + 13 + 12 + 6;
   static int outer_eye_length = 22;
   static int inner_eye_length = 13;
+  static int next_pattern = 0;
 
   if (frame == 0) {
     init_tables();
@@ -479,8 +547,9 @@ void next_frame(int frame) {
     if (time_to_next_pattern) {
       time_to_next_pattern--;
     } else {
-      activate_pattern(PATTERNS + random() % NUM_PATTERNS);
+      activate_pattern(PATTERNS + next_pattern);
       time_to_next_pattern = 10*SEC;
+      next_pattern = random() % NUM_PATTERNS;
     }
   }
 
