@@ -20,6 +20,8 @@
 #include <string.h>
 #include <time.h>
 #include "serpent.h"
+#include "spectrum.pal"
+#include "sunset.pal" 
 
 
 #define SEC FPS  // use this for animation time parameters
@@ -168,8 +170,6 @@ byte base_next_frame(pattern* p, pixel* pixels) {
 
 // "swirl", by Ka-Ping Yee =================================================
 
-#include "spectrum.pal"
-#include "sunset.pal"
 #define SWIRL_PALETTE SPECTRUM_PALETTE
 
 #define SWIRL_DUTY_CYCLE_ON 120
@@ -626,6 +626,28 @@ void squares_move_sprites(void) {
 }
 
 
+// "plasma", by Ka-Ping Yee ================================================
+
+byte plasma_next_frame(pattern* p, pixel* pixels) {
+  short alpha = get_alpha_or_terminate(p->frame, 40*SEC, 60*SEC, 10*SEC);
+  float f = p->frame * 0.1;
+
+  for (int r = 0; r < NUM_ROWS; r++) {
+    for (int c = 0; c < NUM_COLUMNS; c++) {
+      float altitude =
+          SIN((r*0.7 - c + f*2)*2.9) +
+          SIN((SIN(r*4)*40 + c*1.2 + f)*4.7) +
+          SIN((c - r*0.4 - f*0.7)*2.1) *
+          SIN((SIN(c*3.4 + r*0.3)*20 - f*2)*5.1);
+      paint_from_palette(
+          pixels, pixel_index(r, c), SPECTRUM_PALETTE,
+          0.5 + altitude*0.3, alpha);
+    }
+  }
+
+  return 1;
+}
+
 // Flash pattern ===========================================================
 
 byte flash_next_frame(pattern* p, pixel* pixels) {
@@ -639,9 +661,9 @@ byte flash_next_frame(pattern* p, pixel* pixels) {
 
 pattern BASE_PATTERN = {"base", base_next_frame, 0};
 
-#define NUM_PATTERNS 3
+#define NUM_PATTERNS 5
 pattern PATTERNS[] = {
-//  {plasma_next_frame, 0},
+  {"plasma", plasma_next_frame, 0},
   {"squares", squares_next_frame, 0},
   {"swirl", swirl_next_frame, 0},
   {"rabbit-sine", rabbit_sine_next_frame, 0},
