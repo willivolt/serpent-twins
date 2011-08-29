@@ -786,7 +786,7 @@ void activate_pattern(pattern* p) {
 }
 
 void next_frame(int frame) {
-  static long time_to_next_pattern = 5*SEC;
+  static long time_to_next_pattern = 30*SEC;
   static int left_outer_eye_start = 182;
   static int right_outer_eye_start = 182 + 22 + 13 + 12 + 6;
   static int outer_eye_length = 22;
@@ -812,7 +812,7 @@ void next_frame(int frame) {
       time_to_next_pattern--;
     } else {
       activate_pattern(PATTERNS + next_pattern);
-      time_to_next_pattern = 10*SEC;
+      time_to_next_pattern = 5*SEC + (random() % (3*60*SEC));
       next_pattern =
           (next_pattern + (random() % (NUM_PATTERNS - 1))) % NUM_PATTERNS;
     }
