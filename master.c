@@ -458,7 +458,7 @@ byte electric_next_frame(pattern* p, pixel* pixels) {
     temp_pixels[i]=0;
   }
 
-  if (frame>=0) {
+  if(frame>=0) {
     if(frame%10==0) {
       inv_velocity[nnext]=1000/(frame%1000+1);
       inv_omega[nnext]=333/(frame%333+1);
@@ -648,12 +648,115 @@ byte plasma_next_frame(pattern* p, pixel* pixels) {
   return 1;
 }
 
-// Flash pattern ===========================================================
 
-byte flash_next_frame(pattern* p, pixel* pixels) {
-  add_to_pixel(pixels, random() % NUM_PIXELS, 255, 255, 255, 256);
+// "ripple", by Christopher De Vries =======================================
 
-  return p->frame < 60*SEC;
+#define RIPPLES 10
+
+byte ripple_next_frame(pattern* p, pixel* pixels) {
+  static int posx[RIPPLES];
+  static int posy[RIPPLES];
+  static int radius[RIPPLES];
+  static unsigned char red[RIPPLES];
+  static unsigned char green[RIPPLES];
+  static unsigned char blue[RIPPLES];
+  static byte temp_pixels[NUM_PIXELS*3];
+
+  static int nnext=0;
+  static int nmax=0;
+  int i,j,k;
+  int distance;
+  int rmin;
+  int rmax;
+  int pixnum;
+
+  short alpha = get_alpha_or_terminate(p->frame, 2*SEC, 60*SEC, 10*SEC);
+  int frame = p->frame - 5*SEC;
+
+  for(j=0;i<9000;i++) {
+    temp_pixels[i]=0;
+  }
+
+  if(frame>=0) {
+    if(frame%32==0) {
+      red[nnext]=rand()%100+56;
+      green[nnext]=rand()%100+56;
+      blue[nnext]=rand()%100+56;
+      radius[nnext]=0;
+      posx[nnext]=rand()%120;
+      posy[nnext]=rand()%25+50;
+ 
+      nnext++;
+      if(nnext==RIPPLES) nnext=0;
+ 
+      if(nmax<RIPPLES) {
+        nmax++;
+      }
+    }
+ 
+    for(i=0;i<nmax;i++) {
+      radius[i]+=1;
+      red[i]=red[i]*49/50;
+      green[i]=green[i]*49/50;
+      blue[i]=blue[i]*49/50;
+ 
+    }
+ 
+    for(k=0;k<nmax;k++) {
+      if(radius[k]/6==0) {
+        rmin=0;
+        rmax=radius[k]*radius[k];
+      }
+      else {
+        rmin=radius[k]-radius[k]/6;
+        rmin*=rmin;
+        rmax=radius[k]+radius[k]/6;
+        rmax*=rmax;
+      }
+ 
+      for(j=0;j<125;j++) {
+        for(i=0;i<120;i++) {
+          distance = (posx[k]-i)*(posx[k]-i)+(posy[k]-j)*(posy[k]-j);
+          if(distance>=rmin && distance<=rmax) {
+            pixnum = pixel_index(i,j%25)*3;
+            if(255-temp_pixels[pixnum]<red[k]) {
+             temp_pixels[pixnum]=255;
+            }
+            else {
+              temp_pixels[pixnum]+=red[k];
+            }
+            pixnum++;
+ 
+            if(255-temp_pixels[pixnum]<green[k]) {
+             temp_pixels[pixnum]=255;
+            }
+            else {
+              temp_pixels[pixnum]+=green[k];
+            }
+            pixnum++;
+ 
+ 
+            if(255-temp_pixels[pixnum]<blue[k]) {
+             temp_pixels[pixnum]=255;
+            }
+            else {
+              temp_pixels[pixnum]+=blue[k];
+            }
+          }
+        }
+      }
+    }
+  }
+
+  byte* t = temp_pixels;
+  for(i=0;i<NUM_PIXELS;i++) {
+    byte r = *(t++);
+    byte g = *(t++);
+    byte b = *(t++);
+    paint_rgb(pixels, i, r, g, b, alpha); 
+  }
+
+  return 1;
 }
 
 
@@ -661,8 +764,9 @@ byte flash_next_frame(pattern* p, pixel* pixels) {
 
 pattern BASE_PATTERN = {"base", base_next_frame, 0};
 
-#define NUM_PATTERNS 5
+#define NUM_PATTERNS 6
 pattern PATTERNS[] = {
+  {"ripple", ripple_next_frame, 0},
   {"plasma", plasma_next_frame, 0},
   {"squares", squares_next_frame, 0},
   {"swirl", swirl_next_frame, 0},
@@ -709,7 +813,8 @@ void next_frame(int frame) {
     } else {
       activate_pattern(PATTERNS + next_pattern);
       time_to_next_pattern = 10*SEC;
-      next_pattern = random() % NUM_PATTERNS;
+      next_pattern =
+          (next_pattern + (random() % (NUM_PATTERNS - 1))) % NUM_PATTERNS;
     }
   }
 
