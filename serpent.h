@@ -52,11 +52,19 @@ typedef struct { byte r, g, b; } pixel;
 
 // sets the colour of a single pixel
 #define set_pixel(pixels, index, pix) { \
-  byte* __p = (pixels) + (index)*3; \
+  byte* __p = (byte*) (&pixels[index]); \
   *(__p++) = pix.r; \
   *(__p++) = pix.g; \
   *(__p++) = pix.b; \
 }
+
+// sets a single pixel by row and column
+#define set_rgb_rc(pixels, row, col, r, g, b) \
+    set_rgb(pixels, pixel_index(row, col), r, g, b)
+
+// sets a single pixel by row and column
+#define set_pixel_rc(pixels, row, col, pix) \
+    set_pixel(pixels, pixel_index(row, col), pix)
 
 // maps f (a float from 0.0 to 1.0) to a colour in a given palette
 #define palette_index(palette, f) ((int) (((f) - floor(f))*palette##_SIZE))
