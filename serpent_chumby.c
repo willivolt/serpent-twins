@@ -91,7 +91,7 @@ void update_buttons() {
   pressed_button_count = 0;
   for (int b = 1; b <= 4; b++) {
     int state = tcl_read_button(b) ? 1 : 0;
-    if (state == last_button_read[b]) {  // debounce
+    if (1 || state == last_button_read[b]) {  // debounce
       button_state[b] = state;
       if (state) {
         pressed_button = b;
