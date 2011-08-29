@@ -933,11 +933,11 @@ pattern BASE_PATTERN = {"base", base_next_frame, 0};
 
 #define NUM_PATTERNS 7
 pattern PATTERNS[] = {
+  {"swirl", swirl_next_frame, 0},
   {"rabbit-rainbow-twist", rabbit_rainbow_twist_next_frame, 0},
   {"ripple", ripple_next_frame, 0},
   {"plasma", plasma_next_frame, 0},
   {"squares", squares_next_frame, 0},
-  {"swirl", swirl_next_frame, 0},
   {"rabbit-sine", rabbit_sine_next_frame, 0},
   {"electric", electric_next_frame, 0},
 };
@@ -954,7 +954,7 @@ void activate_pattern(pattern* p) {
 }
 
 void next_frame(int frame) {
-  static long time_to_next_pattern = 30*SEC;
+  static long time_to_next_pattern = 15*SEC;
   static int left_outer_eye_start = 182;
   static int right_outer_eye_start = 182 + 22 + 13 + 12 + 6;
   static int outer_eye_length = 22;
