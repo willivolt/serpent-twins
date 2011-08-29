@@ -430,6 +430,12 @@ const char* get_button_sequence() {
   return button_sequence;
 }
 
+void clear_button_sequence() {
+  button_sequence[0] = 0;
+  button_sequence_i = 0;
+  last_button_sequence_time = 0;
+}
+
 static int accel_seq[8][10] = {
   {30, 33, 29, 16, 10, 0, 44, -32, -10, 0},
   {21, 23, 39, 0, 21, 28, -29, -27, -17, -14},
@@ -611,8 +617,7 @@ void idle(void) {
       last_button_count = pressed_button_count;
       if (button_name[pressed_button] == 'y' ||
           now - last_button_sequence_time > 10) {  // cancel
-        button_sequence_i = 0;
-        button_sequence[0] = 0;
+        clear_button_sequence();
       }
     }
   }

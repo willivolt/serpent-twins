@@ -106,6 +106,12 @@ const char* get_button_sequence() {
   return button_sequence;
 }
 
+void clear_button_sequence() {
+  button_sequence[0] = 0;
+  button_sequence_i = 0;
+  last_button_sequence_time = 0;
+}
+
 int read_button(char button) {
   switch (button) {
     case 'Y':
@@ -284,8 +290,7 @@ int main(int argc, char* argv[]) {
     last_button_count = pressed_button_count;
     if (button_name[pressed_button] == 'y' ||
         now - last_button_sequence_time > 10000) {  // cancel
-      button_sequence_i = 0;
-      button_sequence[0] = 0;
+      clear_button_sequence();
     }
 
     if (read_button('a') && read_button('x') && read_button('y')) {
