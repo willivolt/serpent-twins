@@ -216,6 +216,7 @@ void next_frame(int f) {
       set_rgb(head, i, hp.r, hp.g, hp.b);
     }
   }
+  put_head_pixels(head, HEAD_PIXELS);
 
   breath_phase += breath_speed;
   if (breath_phase > 2*M_PI) {

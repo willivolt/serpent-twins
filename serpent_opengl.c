@@ -66,6 +66,7 @@ double camera_aspect = 1.0;
 #define LED_NK 12 // number of LEDs along the length of a segment
 #define LED_NA 25 // number of LEDs around the circumference of a segment
 led_colour leds[NUM_SEGS][LED_NK][LED_NA];
+led_colour head_leds[HEAD_PIXELS];
 colour BASE_COLOUR = {0.05, 0.05, 0.05};
 colour curves[256];
 
@@ -223,8 +224,73 @@ void draw_segment(int segment, colour* grid, int nk, int na) {
   draw_disc(spine[nk], up, right[nk], na);
 }
 
+void draw_octahedron(vector center, double size) {
+  vector x = {size, 0, 0};
+  vector y = {0, size, 0};
+  vector z = {0, 0, size};
+  
+  glBegin(GL_TRIANGLE_FAN);
+  put_vertex(add(center, z));
+  put_vertex(add(center, x));
+  put_vertex(add(center, y));
+  put_vertex(subtract(center, x));
+  put_vertex(subtract(center, y));
+  put_vertex(add(center, x));
+  glEnd();
+  glBegin(GL_TRIANGLE_FAN);
+  put_vertex(subtract(center, z));
+  put_vertex(add(center, x));
+  put_vertex(add(center, y));
+  put_vertex(subtract(center, x));
+  put_vertex(subtract(center, y));
+  put_vertex(add(center, x));
+  glEnd();
+}
+
+#define draw_oct(f, r, u) draw_octahedron( \
+    add(base, add(multiply(f, forward), \
+    add(multiply(u, up), multiply(r, right)))), 0.04)
+
+struct {
+  int count;
+  double forward_scale;
+  double right;
+  double up;
+} head_segments[] = {
+  {182, 0.02, -0.3, 0.4}, // left wing
+  {22, 0.08, -0.3, 0.2}, // left outer eye
+  {13, 0.08, -0.3, 0}, // left inner eye
+  {12 + 6, 0.08, 0, -0.4}, // mouth
+  {22, 0.08, 0.3, 0.2}, // right outer eye
+  {13, 0.08, 0.3, 0}, // right inner eye
+  {182, 0.02, 0.3, 0.4}, // right wing
+  {0, 0, 0} // sentinel
+};
+
+void draw_head() {
+  vector base = compute_spine_point(0, 0);
+  vector previous = compute_spine_point(0, 0.1);
+  vector forward = normalize(subtract(base, previous));
+  vector up = {0, 0, 1};
+  vector right = cross(forward, up);
+  int p = 0;
+  
+  for (int s = 0; head_segments[s].count; s++) {
+    for (int i = 0; i < head_segments[s].count; i++) {
+      colour c = {head_leds[p].r/255.0,
+                  head_leds[p].g/255.0,
+                  head_leds[p].b/255.0};
+      set_colour(c);
+      draw_oct(i*head_segments[s].forward_scale,
+               head_segments[s].right, head_segments[s].up);
+      p++;
+    }
+  }
+}
+
 void display(void) {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  draw_head();
   for (int s = 0; s < NUM_SEGS; s++) {
     draw_segment(s, render_grids[s], SEG_NK, SEG_NA);
   }
@@ -598,7 +664,11 @@ void init(void) {
 
 /* The main public interface.  Implement next_frame() and call this. */
 void put_head_pixels(unsigned char* pixels, int n) {
-  /* Not implemented for now. */
+  for (int i = 0; i < n; i++) {
+    head_leds[i].r = *(pixels++);
+    head_leds[i].g = *(pixels++);
+    head_leds[i].b = *(pixels++);
+  }
 }
 
 void put_segment_pixels(int segment, unsigned char* pixels, int n) {

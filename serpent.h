@@ -19,7 +19,7 @@
 
 #define FPS 20
 
-#define HEAD_PIXELS 394 // number of pixels in the serpent's head
+#define HEAD_PIXELS 500 // number of pixels in the serpent's head
 
 #define NUM_SEGS 10 // number of segments in the serpent
 #define SEG_ROWS 12 // rows (rings) of pixels in one segment
