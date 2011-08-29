@@ -20,13 +20,7 @@
 // this scales the brightness of all the pixels.  255 is default
 #define MAX_BRIGHT 255
 
-#define NSEGS 10
-#define AROUND 25
-#define LONG 12
-unsigned char pixels[3*AROUND*LONG*NSEGS];
-
-#define PI 3.14159
-#define TWOPI (2*3.14159)
+unsigned char pixels[3*NUM_COLUMNS*SEG_ROWS*NUM_SEGS];
 
 #define SIN(n) sin_table[((int) (n)) & 0xff]
 #define COS(n) sin_table[((int) (n) + 0x40) & 0xff]
@@ -54,36 +48,36 @@ void next_frame(int frame) {
     
     if (frame == 0) {
         for (int i = 0; i < 256; i++) {
-            sin_table[i] = sin(i/256.0*TWOPI);
+            sin_table[i] = sin(i/256.0*2*M_PI);
         }
     }
 
 
-    for (int i = 0; i < 300*NSEGS; i++) {
+    for (int i = 0; i < 300*NUM_SEGS; i++) {
         //-------------------------------------------
         // RADIAL COORDINATES
-        x = (i % AROUND);  // theta.  0 to 24
-        y = (i / AROUND);  // along cylinder.  0 to NSEGS*LONG (120)
-        seg = y / LONG;
+        x = (i % NUM_COLUMNS);  // theta.  0 to 24
+        y = (i / NUM_COLUMNS);  // along cylinder.  0 to NUM_SEGS*SEG_ROWS (120)
+        seg = y / SEG_ROWS;
         // reverse every other row
         if (y % 2 == 1) {
-            x = (AROUND-1)-x;
+            x = (NUM_COLUMNS-1)-x;
         }
         
         // rotate 90 degrees to one side
-        //x = (x + AROUND/4) % AROUND;
+        //x = (x + NUM_COLUMNS/4) % NUM_COLUMNS;
 
         // twist like a candy cane
         //x = (x + y*0.6);
-        //x = x % AROUND;
+        //x = x % NUM_COLUMNS;
 
         // spin like a rolling log
-        //x = (x + frame) % AROUND;
+        //x = (x + frame) % NUM_COLUMNS;
 
         //-------------------------------------------
         // ALTITUDE
-//        alt = -cos(   x/(AROUND-1.0) * TWOPI   );
-        alt = -COS(   x/(AROUND-1.0) * 256   );
+//        alt = -cos(   x/(NUM_COLUMNS-1.0) * 2*M_PI   );
+        alt = -COS(   x/(NUM_COLUMNS-1.0) * 256   );
 
         //-------------------------------------------
         // BRIGHTNESS
@@ -91,8 +85,8 @@ void next_frame(int frame) {
         // combine two sine waves along the length of the snake with the altitude at each point
         sin_small = SIN(   (time_offset_small + y) / wavelength_small * 256   );
         sin_large = SIN(   (time_offset_large + y) / wavelength_large * 256   );
-//        sin_small = sin(   (time_offset_small + y) / wavelength_small * TWOPI   );
-//        sin_large = sin(   (time_offset_large + y) / wavelength_large * TWOPI   );
+//        sin_small = sin(   (time_offset_small + y) / wavelength_small * 2*M_PI   );
+//        sin_large = sin(   (time_offset_large + y) / wavelength_large * 2*M_PI   );
         bright = (sin_small*0.5 + sin_large*0.7)*0.7 + alt*0.5;
 
         // increase contrast and invert
