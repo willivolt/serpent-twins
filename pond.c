@@ -21,11 +21,11 @@
 #include "spectrum.pal"
 
 #define POND_FRICTION_MIN_VELOCITY 0.02
-#define POND_FRICTION_FORCE 10
-#define POND_TICKS_PER_FRAME 10
+#define POND_FRICTION_FORCE 12
+#define POND_TICKS_PER_FRAME 4
 #define POND_DUTY_CYCLE_ON 1.0
-#define POND_DUTY_CYCLE_PERIOD 10.0
-#define POND_TIME_SPEEDUP 2
+#define POND_DUTY_CYCLE_PERIOD 20.0
+#define POND_TIME_SPEEDUP 1
 
 unsigned char pixels[NUM_ROWS*NUM_COLUMNS*3];
 float pond_position[NUM_ROWS][NUM_COLUMNS];
@@ -64,7 +64,7 @@ void pond_tick(float dt) {
 }
 
 int pond_drop_x, pond_drop_y, pond_last_on = 0;
-float pond_drop_impulse = 2000/POND_MASS;
+float pond_drop_impulse = 1500/POND_MASS;
 #define POND_ENV_MAP_SIZE 800
 unsigned char pond_env_map[2400];
 #define POND_ENV_MAP pond_env_map
@@ -155,4 +155,5 @@ void next_frame(int f) {
   for (int s = 0; s < NUM_SEGS; s++) {
     put_segment_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
   }
+  put_head_pixels((byte*) pixels, HEAD_PIXELS);
 }

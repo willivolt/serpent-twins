@@ -1,0 +1,26 @@
+#!/bin/bash
+
+cd /mnt/storage/autorun
+killall acceld
+killall swirl
+killall rabbit-sine
+killall pond
+killall electric
+killall squares
+killall rabbit-rainbow-twist
+killall plasma
+killall ripple
+
+while true; do
+  acceld &
+  echo
+  echo === swirl accel ===
+  bin/swirl
+  killall acceld
+  for i in swirl rabbit-sine pond electric squares rabbit-rainbow-twist plasma ripple; do
+    echo
+    echo
+    echo === $i ===
+    bin/$i
+  done
+done

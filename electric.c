@@ -67,5 +67,6 @@ void next_frame(int frame) {
   for(int s = 0; s<10; s++) {
     put_segment_pixels(s, &pixels[s*900], 300);
   }
+  put_head_pixels((byte*) pixels, HEAD_PIXELS);
 }
 

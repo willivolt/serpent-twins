@@ -14,19 +14,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
+#include <string.h>
 #include "serpent.h"
 
 unsigned char pixels[1000];
 
 void next_frame(int frame) {
-  int i;
+  bzero(pixels, 1000);
+
   int pos = frame % 300;
-  for (i = 0; i < 300; i++) {
-    set_rgb(pixels, i,
-            (i == pos) ? 255 : 0,
-            (i == pos + 1) ? 255 : 0,
-            (i == pos + 2) ? 255 : 0);
-  }
-  put_pixels(0, pixels, 300);
+  set_rgb(pixels, pos, 0, 255, 0);
+  set_rgb(pixels, pos + 4, 255, 255, 255);
+
+  put_segment_pixels(0, pixels, 300);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

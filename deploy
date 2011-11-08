@@ -3,10 +3,12 @@
 while [ ! -d /Volumes/SERPENT/autorun ]; do
   sleep 0.1
 done
-rm /Volumes/SERPENT/autorun/*
+rm -r /Volumes/SERPENT/autorun/*
 cp *.c *.h *.pal /Volumes/SERPENT/autorun/
-cp autosh build play /Volumes/SERPENT/autorun/
+cp autosh build cycle play /Volumes/SERPENT/autorun/
 cp autorunner /Volumes/SERPENT/
+mkdir /Volumes/SERPENT/autorun/bin
+cp -pr chumby-bin/* /Volumes/SERPENT/autorun/bin
 ls -al /Volumes/SERPENT/autorun/
 eject
 
