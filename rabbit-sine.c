@@ -167,6 +167,7 @@ void next_frame(int frame) {
     for (int s = 0; s < NUM_SEGS; s++) {
       put_segment_pixels(s, pixels + s*SEG_PIXELS*3, SEG_PIXELS);
     }
+    put_head_pixels(pixels, HEAD_PIXELS);
 }
 
 

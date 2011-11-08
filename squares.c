@@ -101,6 +101,7 @@ void next_frame(int frame) {
   for (int s = 0; s < NUM_SEGS; s++) {
     put_segment_pixels(s, pixels + 3*SEG_PIXELS*s, SEG_PIXELS);
   }
+  put_head_pixels((byte*) pixels, HEAD_PIXELS);
   squares_move_sprites();
 }
 

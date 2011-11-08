@@ -85,6 +85,7 @@ static char button_sequence[10] = "";
 static int button_sequence_i = 0;
 static int pressed_button = 0;
 static int pressed_button_count = 0;
+static int cancel_start_time = 0;
 
 void update_buttons() {
   pressed_button = 0;
@@ -242,7 +243,7 @@ int main(int argc, char* argv[]) {
   int next_frame_time = start_time + 1000/FPS;
   int now;
   int s, i;
-  int clock_delay = 10;
+  int clock_delay = 0;
   int time_buffer[11], ti = 0, tf = 0;
   int last_button_count = 0;
 
@@ -281,6 +282,11 @@ int main(int argc, char* argv[]) {
 
     update_buttons();
     if (last_button_count == 0 && pressed_button_count == 1) {
+      if (button_name[pressed_button] == 'y') {
+        cancel_start_time = now;
+      } else {
+        cancel_start_time = 0;
+      }
       if (button_sequence_i < 10) {
         button_sequence[button_sequence_i++] = button_name[pressed_button];
         button_sequence[button_sequence_i] = 0;
@@ -291,6 +297,10 @@ int main(int argc, char* argv[]) {
     if (button_name[pressed_button] == 'y' ||
         now - last_button_sequence_time > 10000) {  // cancel
       clear_button_sequence();
+    }
+    if (cancel_start_time > 0 && button_name[pressed_button] == 'y' &&
+        now - cancel_start_time > 2000) {
+      break;
     }
 
     if (read_button('a') && read_button('x') && read_button('y')) {

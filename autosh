@@ -1,3 +1,17 @@
 killall autostart
 killall autobuilt
-./build test_serpent && cp bin/test_serpent autobuilt
+
+./build swirl
+./build rabbit-sine
+./build pond
+./build electric
+./build squares
+./build rabbit-rainbow-twist
+./build plasma
+./build ripple
+
+mkdir /mnt/usb/newbins
+cp bin/* /mnt/usb/newbins
+
+cp cycle autobuilt
+chmod 755 autobuilt
