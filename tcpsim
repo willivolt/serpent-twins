@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Copyright 2011 Christopher De Vries and Google Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Run an animation on the OpenGL simulator.
+
+CC=gcc
+if [ $(uname) == "Darwin" ]; then
+  COPTS="-std=c99 -O3 -framework OpenGL -framework GLUT"
+elif [[ $(uname) == *CYGWIN* ]]; then
+  COPTS="-std=c99 -O3 -lopengl32 -lglu32 -lglut32 -lm -D_STDCALL_SUPPORTED -Xlinker --enable-stdcall-fixup \
+       $SYSTEMROOT/System32/glu32.dll /bin/glut32.dll $SYSTEMROOT/System32/opengl32.dll"
+else
+  COPTS="-std=c99 -O3 -lGL -lGLU -lglut -lm"
+fi
+
+name=${1%%.c}
+if [ ! -d bin ]; then mkdir bin; fi
+
+echo $CC $COPTS serpent_tcp.c tcp_pixels.c $name.c -o bin/$name && \
+    $CC $COPTS serpent_tcp.c tcp_pixels.c $name.c -o bin/$name && \
+    echo bin/$name && \
+    bin/$name
