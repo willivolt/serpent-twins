@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Run an animation on the Chumby.
+
+CC=gcc
+COPTS="-std=c99 -lm -O3"
+
+name=${1%%.c}
+if [ ! -d bin ]; then mkdir bin; fi
+
+echo $CC $COPTS serpent_tcp.c tcp_pixels.c total_control.c $name.c -o bin/$name && \
+    $CC $COPTS serpent_tcp.c tcp_pixels.c total_control.c $name.c -o bin/$name && \
+    echo bin/$name && \
+    bin/$name
