@@ -765,12 +765,12 @@ byte ripple_next_frame(pattern* p, pixel* pixels) {
 
 // "rabbit-rainbow-twist", by David Rabbit Wallace =========================
 
-inline float max(float a, float b) {
+float max(float a, float b) {
     if (a > b) {return a;}
     return b;
 }
 
-inline float min(float a, float b) {
+float min(float a, float b) {
     if (a < b) {return a;}
     return b;
 }
