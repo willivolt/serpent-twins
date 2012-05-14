@@ -250,18 +250,16 @@ int main(int argc, char* argv[]) {
 
   bzero(head, (1 + HEAD_PIXELS)*3);
   bzero(segments, NUM_SEGS*(1 + SEG_PIXELS)*3);
-  // tcl_init();
-  // tcl_set_clock_delay(clock_delay);
 
-  tcp_init("127.0.0.1", 6789);
   while (1) {
+    tcp_init();
+
     read_accelerometer("/tmp/.accel", frame);
     while (now < next_frame_time) {
       now = get_milliseconds();
     }
     longest_sequence = 0;
     next_frame(frame++);
-    // tcl_put_pixels_multi(strand_ptrs, 1 + NUM_SEGS, longest_sequence + 1);
     tcp_put_pixels_multi(strand_ptrs, 1 + NUM_SEGS, longest_sequence + 1);
 
     now = get_milliseconds();
@@ -322,4 +320,6 @@ int main(int argc, char* argv[]) {
       }
     }
   }
+
+  fprintf(stderr, "Loop terminated.\n");
 }
