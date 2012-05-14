@@ -65,8 +65,9 @@ void tcp_send_sync(const byte* buf, int len) {
   int sent = 0;
   int result;
   while (sock >= 0 && sent < len) {
-    result = send(sock, buf + sent, len - sent, MSG_DONTWAIT);
+    result = send(sock, buf + sent, len - sent, 0);
     if (result < 0) {
+      perror("Write error");
       close(sock);
       sock = -1;
     }
