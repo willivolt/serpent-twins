@@ -77,7 +77,7 @@ void tcp_send_sync(const byte* buf, int len) {
 void tcp_put_pixels(byte address, byte* pixels, int n) {
   byte header[4];
   int length = n*3;
-  header[0] = address;
+  header[0] = address + 1;
   header[1] = 0;
   header[2] = length >> 8;
   header[3] = length & 0xff;
