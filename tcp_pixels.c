@@ -18,6 +18,7 @@ int tcp_connect(char* ipaddr, int port) {
   char buffer[100];
   int sock = -1;
   struct sockaddr_in address;
+  struct timeval timeout;
   address.sin_family = AF_INET;
   address.sin_port = htons(port);
   if (inet_pton(AF_INET, ipaddr, &(address.sin_addr)) != 1) {
@@ -25,6 +26,13 @@ int tcp_connect(char* ipaddr, int port) {
     return -1;
   }
   sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+  /* Set a short send timeout in case we get stuck. */
+  timeout.tv_sec = 1;
+  timeout.tv_usec = 0;
+  setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
+  /* Connect to the master PSoC board. */
   if (connect(sock, (struct sockaddr*) &address, sizeof(address)) != 0) {
     close(sock);
     sprintf(buffer, "Could not connect to %s port %d", ipaddr, port);
