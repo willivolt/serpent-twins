@@ -1,3 +1,5 @@
 syntax: glob
 bin
 .DS_Store
+acceld-1.0.0
+chumby-bin
