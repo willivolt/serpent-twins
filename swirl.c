@@ -24,10 +24,10 @@
 
 #define SWIRL_DUTY_CYCLE_ON 120
 #define SWIRL_DUTY_CYCLE_OFF 120
-#define SWIRL_IMPULSE_START (30*FPS)
+#define SWIRL_IMPULSE_START (1*FPS)
 
 #define SWIRL_TICKS_PER_FRAME 10 
-#define SWIRL_SPRING_CONST 400  // kg/s^2
+#define SWIRL_SPRING_CONST 6000  // kg/s^2
 #define SWIRL_MASS 0.1  // kg
 
 unsigned char pixels[NUM_PIXELS*3];
@@ -96,7 +96,7 @@ void next_frame(int x) {
           sin(2*M_PI*(duty_phase/swirl_auto_impulse_period));
     } else {
       swirl_auto_impulse_period = (random() % 30) + 30;
-      swirl_auto_impulse_amplitude = (random() % 10)*0.1 + 0.5;
+      swirl_auto_impulse_amplitude = ((random() % 10)*0.1 + 0.5)*0.4;
     }
   }
   if (read_button('a') || read_button('b')) {

@@ -17,7 +17,7 @@
 #define M_PI 3.1415926535897932384626433832795
 #endif
 
-#define FPS 20
+#define FPS 60
 
 #define HEAD_PIXELS 500 // number of pixels in the serpent's head
 
