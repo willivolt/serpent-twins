@@ -58,7 +58,7 @@ void put_head_pixels(byte* pixels, int n) {
     head[2] = diagnostic_colours[0][2];
   }
   toggle++;
-  memcpy(head + 3, pixels, n*3);  // skip first pixel
+  memcpy(head, pixels, n*3);  // skip first pixel
   if (n > longest_sequence) {
     longest_sequence = n;
   }
@@ -72,7 +72,7 @@ void put_segment_pixels(int segment, byte* pixels, int n) {
     segments[segment][2] = diagnostic_colours[segment + 1][2];
   }
   toggle++;
-  memcpy(segments[segment] + 3, pixels, n*3);  // skip first pixel
+  memcpy(segments[segment], pixels, n*3);  // skip first pixel
   if (n > longest_sequence) {
     longest_sequence = n;
   }
@@ -260,7 +260,7 @@ int main(int argc, char* argv[]) {
     }
     longest_sequence = 0;
     next_frame(frame++);
-    tcp_put_pixels_multi(strand_ptrs, 1 + NUM_SEGS, longest_sequence + 1);
+    tcp_put_pixels_multi(strand_ptrs, 1 + NUM_SEGS, 300);
 
     now = get_milliseconds();
     tf += (tf < 10);
