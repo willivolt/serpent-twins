@@ -15,23 +15,22 @@
 #include "serpent.h"
 #include "tcp_pixels.h"
 
-static byte head[(1 + HEAD_PIXELS)*3];
-static byte segments[NUM_SEGS][(1 + SEG_PIXELS)*3];
+static byte head[HEAD_PIXELS*3];
+static byte segments[NUM_SEGS][(SEG_PIXELS + FIN_PIXELS + LID_PIXELS)*3];
+static byte fins[NUM_SEGS*FIN_PIXELS*3];
 static byte* strand_ptrs[1 + NUM_SEGS] = {
   head,
-  segments[0],
-  segments[1],
-  segments[2],
-  segments[3],
-  segments[4],
-  segments[5],
-  segments[6],
-  segments[7],
-  segments[8],
-  segments[9]
+  segments[0], // barrel 1
+  segments[1], // barrel 2
+  segments[2], // barrel 3
+  segments[3], // barrel 4
+  segments[4], // barrel 5
+  segments[5], // barrel 6
+  segments[6], // barrel 7
+  segments[7], // barrel 8
+  segments[8], // barrel 9
+  segments[9] // tail
 };
-
-static int longest_sequence = 0;
 
 static byte diagnostic_colours[11][3] = {
   {255, 255, 255},  // white for head
@@ -47,34 +46,62 @@ static byte diagnostic_colours[11][3] = {
   {128, 0, 32}  // pink for segment 10
 };
 
-static int toggle = 0;
-static int diagnostic_disco = 0;
-
 void put_head_pixels(byte* pixels, int n) {
-  head[0] = head[1] = head[2] = 0;
-  if (diagnostic_disco && (toggle % 3)) {
-    head[0] = diagnostic_colours[0][0];  // diagnostic
-    head[1] = diagnostic_colours[0][1];
-    head[2] = diagnostic_colours[0][2];
-  }
-  toggle++;
-  memcpy(head, pixels, n*3);  // skip first pixel
-  if (n > longest_sequence) {
-    longest_sequence = n;
-  }
+  memcpy(head, pixels, n*3);
 }
 
 void put_segment_pixels(int segment, byte* pixels, int n) {
-  segments[segment][0] = segments[segment][1] = segments[segment][2] = 0;
-  if (diagnostic_disco && (toggle % 5)) {
-    segments[segment][0] = diagnostic_colours[segment + 1][0];  // diagnostic
-    segments[segment][1] = diagnostic_colours[segment + 1][1];
-    segments[segment][2] = diagnostic_colours[segment + 1][2];
+  memcpy(segments[segment], pixels, n*3);
+}
+
+void put_fin_pixels(byte* pixels, int n) {
+  int s, b, i;
+  byte* dest;
+  for (s = 0; n > 0 && s < NUM_SEGS; s++) {
+    dest = segments[s] + (SEG_PIXELS + FIN_PIXELS)*3;
+    for (i = 0; n > 0 && i < FIN_PIXELS; i++) {
+      dest -= 3;
+      dest[0] = *pixels++;
+      dest[1] = *pixels++;
+      dest[2] = *pixels++;
+      n--;
+    }
   }
-  toggle++;
-  memcpy(segments[segment], pixels, n*3);  // skip first pixel
-  if (n > longest_sequence) {
-    longest_sequence = n;
+}
+
+void average_rgb(byte* dest, byte* pixels, int n) {
+  int i;
+  int red = 0, green = 0, blue = 0;
+  byte* p = pixels;
+  for (i = 0; i < n; i++) {
+    red += *(p++);
+    green += *(p++);
+    blue += *(p++);
+  }
+  dest[0] = (byte) (red/n);
+  dest[1] = (byte) (green/n);
+  dest[2] = (byte) (blue/n);
+}
+
+void set_lid_pixels() {
+  int s;
+  byte* row;
+  byte* lid;
+  byte temp[6];
+  for (s = 0; s < NUM_SEGS; s++) {
+    row = segments[s];
+    lid = segments[s] + (SEG_PIXELS + FIN_PIXELS)*3;
+    average_rgb(lid + 0*3, row + 11*3, 3);
+    average_rgb(lid + 1*3, row + 14*3, 3);
+    average_rgb(lid + 2*3, row + 17*3, 3);
+    average_rgb(lid + 3*3, row + 20*3, 3);
+    average_rgb(temp, row + 23*3, 2);
+    average_rgb(temp + 3, row + 0*3, 2);
+    average_rgb(lid + 4*3, temp, 2);
+    average_rgb(lid + 5*3, row + 2*3, 3);
+    average_rgb(lid + 6*3, row + 5*3, 3);
+    average_rgb(lid + 7*3, row + 8*3, 3);
+    average_rgb(lid + 8*3, row, 25);
   }
 }
 
@@ -248,8 +275,8 @@ int main(int argc, char* argv[]) {
   int time_buffer[11], ti = 0, tf = 0;
   int last_button_count = 0;
 
-  bzero(head, (1 + HEAD_PIXELS)*3);
-  bzero(segments, NUM_SEGS*(1 + SEG_PIXELS)*3);
+  bzero(head, HEAD_PIXELS*3);
+  bzero(segments, NUM_SEGS*(SEG_PIXELS + FIN_PIXELS)*3);
 
   while (1) {
     tcp_init();
@@ -258,9 +285,28 @@ int main(int argc, char* argv[]) {
     while (now < next_frame_time) {
       now = get_milliseconds();
     }
-    longest_sequence = 0;
+
+    // fin animation
+    int n = NUM_SEGS*FIN_PIXELS;
+    int fin_target = (frame % (n + FPS*2)) - FPS;
+    for (i = 0; i < n; i++) {
+      float dist = (float) (i - fin_target)/(float) n;
+      float bright = 1.0/(dist*dist*dist);
+      int red = bright*300;
+      int green = bright*200;
+      int blue = bright*100;
+      fins[i*3] = (red > 255) ? 255 : red;
+      fins[i*3 + 1] = (green > 255) ? 255 : green;
+      fins[i*3 + 2] = (blue > 255) ? 255 : blue;
+    }
+    put_fin_pixels(fins, n);
+
     next_frame(frame++);
-    tcp_put_pixels_multi(strand_ptrs, 1 + NUM_SEGS, 300);
+    set_lid_pixels();
+    tcp_put_pixels(1, head, HEAD_PIXELS);
+    for (s = 0; s < NUM_SEGS; s++) {
+      tcp_put_pixels(2 + s, segments[s], SEG_PIXELS + FIN_PIXELS);
+    }
 
     now = get_milliseconds();
     tf += (tf < 10);
@@ -309,14 +355,12 @@ int main(int argc, char* argv[]) {
       if (clock_delay < 100) {
         tcl_set_clock_delay(++clock_delay);
         printf("\ndelay %d\n", clock_delay);
-        diagnostic_disco = 1;
       }
     }
     if (read_button('b') && read_button('x') && read_button('y')) {
       if (clock_delay > 0) {
         tcl_set_clock_delay(--clock_delay);
         printf("\ndelay %d\n", clock_delay);
-        diagnostic_disco = 0;
       }
     }
   }

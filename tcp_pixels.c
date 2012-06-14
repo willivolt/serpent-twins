@@ -84,19 +84,23 @@ void tcp_send_sync(const byte* buf, int len) {
   }
 }
 
+byte tcp_buffer[1000*3];
+
 void tcp_put_pixels(byte address, byte* pixels, int n) {
   byte header[4];
   int length = n*3;
-  header[0] = address + 1;
+  byte* dest;
+  int i;
+  for (i = 0; i < n; i++) {
+    *dest++ = pixels[2];  // blue
+    *dest++ = pixels[1];  // green
+    *dest++ = pixels[0];  // red
+    pixels += 3;
+  }
+  header[0] = address;
   header[1] = 0;
   header[2] = length >> 8;
   header[3] = length & 0xff;
   tcp_send_sync(header, 4);
-  tcp_send_sync(pixels, length);
-}
-
-void tcp_put_pixels_multi(byte** pixel_ptrs, int num_channels, int num_pixels) {
-  for (int i = 0; i < num_channels; i++) {
-    tcp_put_pixels(i, pixel_ptrs[i], num_pixels);
-  }
+  tcp_send_sync(tcp_buffer, length);
 }

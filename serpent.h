@@ -17,9 +17,9 @@
 #define M_PI 3.1415926535897932384626433832795
 #endif
 
-#define FPS 60
+#define FPS 30
 
-#define HEAD_PIXELS 500 // number of pixels in the serpent's head
+#define HEAD_PIXELS 600 // number of pixels in the serpent's head
 
 #define NUM_SEGS 10 // number of segments in the serpent
 #define SEG_ROWS 12 // rows (rings) of pixels in one segment
@@ -27,6 +27,8 @@
 #define NUM_COLUMNS 25 // number of pixels in one ring
 #define SEG_PIXELS (SEG_ROWS*NUM_COLUMNS) // number of pixels in one segment
 #define NUM_PIXELS (NUM_SEGS*SEG_PIXELS) // number of pixels in entire serpent
+#define LID_PIXELS 9 // number of pixels in one segment's lid
+#define FIN_PIXELS 9 // number of pixels in one segment's fins
 
 #ifndef TYPEDEF_BYTE
 #define TYPEDEF_BYTE
@@ -80,6 +82,7 @@ typedef struct { byte r, g, b; } pixel;
 
 void put_head_pixels(byte* pixels, int n);
 void put_segment_pixels(int segment, byte* pixels, int n);
+void put_fin_pixels(byte* pixels, int n);
 void next_frame(int frame);
 int read_button(char b);  // 'a', 'b', 'x', or 'y'
 const char* get_button_sequence();
