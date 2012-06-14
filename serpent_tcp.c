@@ -266,11 +266,13 @@ int accel_forward() {
 }
 
 int main(int argc, char* argv[]) {
+  static int fcount = 0;
   int frame = 0;
   int start_time = get_milliseconds();
   int next_frame_time = start_time + 1000/FPS;
   int now;
-  int s, i;
+  int s, i, j;
+  FILE* fp;
   int clock_delay = 0;
   int time_buffer[11], ti = 0, tf = 0;
   int last_button_count = 0;
@@ -281,31 +283,43 @@ int main(int argc, char* argv[]) {
   while (1) {
     tcp_init();
 
+    if (frame % 10 == 0) {
+      fp = fopen("/tmp/next_pattern", "r");
+      if (fp) {
+        fclose(fp);
+        strcpy(button_sequence, "abxbx");
+        unlink("/tmp/next_pattern");
+      }
+
+      fp = fopen("/tmp/red_thing", "r");
+      if (fp) {
+        fclose(fp);
+        strcpy(button_sequence, "ababxxx");
+        unlink("/tmp/red_thing");
+      }
+    }
+
     read_accelerometer("/tmp/.accel", frame);
     while (now < next_frame_time) {
       now = get_milliseconds();
     }
 
-    // fin animation
+    // White fin chaser light
     int n = NUM_SEGS*FIN_PIXELS;
-    int fin_target = (frame % (n + FPS*2)) - FPS;
+    fcount = (fcount + 1) % n;
     for (i = 0; i < n; i++) {
-      float dist = (float) (i - fin_target)/(float) n;
-      float bright = 1.0/(dist*dist*dist);
-      int red = bright*300;
-      int green = bright*200;
-      int blue = bright*100;
-      fins[i*3] = (red > 255) ? 255 : red;
-      fins[i*3 + 1] = (green > 255) ? 255 : green;
-      fins[i*3 + 2] = (blue > 255) ? 255 : blue;
+      fins[i*3] = (i == fcount) ? 255 : 0;
+      fins[i*3 + 1] = (i == fcount) ? 255 : 0;
+      fins[i*3 + 2] = (i == fcount) ? 255 : 0;
     }
     put_fin_pixels(fins, n);
 
     next_frame(frame++);
     set_lid_pixels();
+
     tcp_put_pixels(1, head, HEAD_PIXELS);
     for (s = 0; s < NUM_SEGS; s++) {
-      tcp_put_pixels(2 + s, segments[s], SEG_PIXELS + FIN_PIXELS);
+      tcp_put_pixels(2 + s, segments[s], SEG_PIXELS + FIN_PIXELS + LID_PIXELS);
     }
 
     now = get_milliseconds();
