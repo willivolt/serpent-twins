@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "font.h"
 
 font* font_read(char* filename, int min_char, int char_width) {
