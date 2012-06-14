@@ -88,8 +88,8 @@ byte tcp_buffer[1000*3];
 
 void tcp_put_pixels(byte address, byte* pixels, int n) {
   byte header[4];
-  int length = n*3;
-  byte* dest;
+  int length = n*3 + 3;
+  byte* dest = tcp_buffer;
   int i;
   for (i = 0; i < n; i++) {
     *dest++ = pixels[2];  // blue
@@ -97,6 +97,9 @@ void tcp_put_pixels(byte address, byte* pixels, int n) {
     *dest++ = pixels[0];  // red
     pixels += 3;
   }
+  *dest++ = 0;
+  *dest++ = 0;
+  *dest++ = 0;
   header[0] = address;
   header[1] = 0;
   header[2] = length >> 8;
