@@ -177,7 +177,7 @@ byte base_next_frame(pattern* p, pixel* pixels) {
 
 #define SWIRL_DUTY_CYCLE_ON 120
 #define SWIRL_DUTY_CYCLE_OFF 120
-#define SWIRL_IMPULSE_START (60*SEC)
+#define SWIRL_IMPULSE_START (10*SEC)
 
 #define SWIRL_TICKS_PER_FRAME 10 
 #define SWIRL_SPRING_CONST 400  // kg/s^2
@@ -190,7 +190,7 @@ float swirl_button_force = 30;
 float swirl_restore_factor = 1;
 float swirl_restore_center = 0;
 float swirl_auto_impulse_period = 40;
-float swirl_auto_impulse_amplitude = 0.9;
+float swirl_auto_impulse_amplitude = 0.5;
 
 void swirl_tick(float dt) {
   float friction_force = 0.05 + read_button('y')*0.2;
@@ -632,7 +632,7 @@ void squares_move_sprites(void) {
 // "plasma", by Ka-Ping Yee ================================================
 
 byte plasma_next_frame(pattern* p, pixel* pixels) {
-  short alpha = get_alpha_or_terminate(p->frame, 40*SEC, 60*SEC, 10*SEC);
+  short alpha = get_alpha_or_terminate(p->frame, 10*SEC, 60*SEC, 10*SEC);
   float f = p->frame * 0.1;
 
   for (int r = 0; r < NUM_ROWS; r++) {
@@ -674,7 +674,7 @@ byte ripple_next_frame(pattern* p, pixel* pixels) {
   int pixnum;
 
   short alpha = get_alpha_or_terminate(p->frame, 2*SEC, 60*SEC, 10*SEC);
-  int frame = p->frame - 5*SEC;
+  int frame = p->frame - 15*SEC;
 
   for(j=0;i<9000;i++) {
     temp_pixels[i]=0;
@@ -981,7 +981,7 @@ unsigned char pond_env_map[2400];
 typedef unsigned short word;
 
 byte pond_next_frame(pattern* p, pixel* pixels) {
-  short alpha = get_alpha_or_terminate(p->frame, 15*SEC, 2*60*SEC, 15*SEC);
+  short alpha = get_alpha_or_terminate(p->frame, 10*SEC, 2*60*SEC, 15*SEC);
   int f = p->frame;
 
   float t = POND_TIME_SPEEDUP * (float) f / FPS;
@@ -1087,7 +1087,7 @@ void activate_pattern(pattern* p) {
 }
 
 void next_frame(int frame) {
-  static long time_to_next_pattern = 15*SEC;
+  static long time_to_next_pattern = 5*SEC;
   static int left_outer_eye_start = 182;
   static int right_outer_eye_start = 182 + 22 + 13 + 12 + 6;
   static int outer_eye_length = 22;
@@ -1114,9 +1114,9 @@ void next_frame(int frame) {
       time_to_next_pattern--;
     } else {
       activate_pattern(PATTERNS + next_pattern);
-      time_to_next_pattern = 5*SEC + (random() % (3*60*SEC));
-      next_pattern =
-          (next_pattern + (random() % (NUM_PATTERNS - 1))) % NUM_PATTERNS;
+      time_to_next_pattern = 5*SEC + (random() % (10*SEC));
+      next_pattern = (next_pattern + 1) % NUM_PATTERNS;
+          /*(next_pattern + (random() % (NUM_PATTERNS - 1))) % NUM_PATTERNS;*/
     }
   }
 
