@@ -105,10 +105,6 @@ void midi_poll() {
   }
 }
 
-byte midi_get_note(byte note) {
-  return midi_note[note];
-}
-
 void midi_set_note(byte note, byte velocity) {
   byte message[3];
   message[0] = (velocity == 0) ? 0x80 : 0x90;
@@ -116,10 +112,6 @@ void midi_set_note(byte note, byte velocity) {
   message[2] = (velocity == 0) ? 0x7f : velocity;
   write(midi_out, message, 3);
   midi_note[note] = velocity;
-}
-
-byte midi_get_control(byte control) {
-  return midi_control[control];
 }
 
 void midi_set_control(byte control, byte value) {
