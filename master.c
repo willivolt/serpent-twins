@@ -24,6 +24,7 @@
 #include "serpent.h"
 #include "spectrum.pal"
 #include "sunset.pal" 
+#include "midi.h"
 
 
 #define SEC FPS  // use this for animation time parameters
@@ -1123,6 +1124,32 @@ void next_frame(int frame) {
       time_to_next_pattern = 5*SEC + (random() % (10*SEC));
       next_pattern = (next_pattern + 1) % NUM_PATTERNS;
           /*(next_pattern + (random() % (NUM_PATTERNS - 1))) % NUM_PATTERNS;*/
+    }
+  }
+
+  float brightness[NUM_ROWS];
+  // control 1: dim all barrels
+  // control 2: spotlight brightness
+  // control 3: spotlight size
+  // control 4: spotlight position
+  float dim_level = midi_get_control(1)/127.0;
+  float spot_gain = (midi_get_control(2)/127.0)*5;
+  float spot_size = 4000.0 / (midi_get_control(3)*0.02*midi_get_control(3) + 10);
+  float spot_pos = (midi_get_control(4)/127.0)*1.4 - 0.2;
+  for (int r = 0; r < NUM_ROWS; r++) {
+    float dist = fabs(((float) r)/NUM_ROWS - spot_pos)*spot_size;
+    brightness[r] = dim_level + spot_gain*spot_gain/(1 + dist*dist*dist*dist);
+  }
+  for (int r = 0; r < NUM_ROWS; r++) {
+    float gain = brightness[r];
+    for (int c = 0; c < NUM_COLUMNS; c++) {
+      byte* p = pixels + pixel_index(r, c);
+      float x = gain * (p[0] + (gain > 1 ? gain - 1 : 0));
+      p[0] = x > 255 ? 255 : x;
+      x = gain * (p[1] + (gain > 1 ? gain - 1 : 0));
+      p[1] = x > 255 ? 255 : x;
+      x = gain * (p[2] + (gain > 1 ? gain - 1 : 0));
+      p[2] = x > 255 ? 255 : x;
     }
   }
 
