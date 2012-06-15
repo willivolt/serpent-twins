@@ -102,9 +102,14 @@ struct pattern {
   long frame;
 };
 typedef struct pattern pattern;
+int next_pattern_override_start = -1;
 
 short transition_alpha(
     long frame, long in_period, long duration, long out_period) {
+  if (next_pattern_override_start > 0) {
+    frame = frame - next_pattern_override_start + in_period + duration;
+    out_period = 3*SEC;
+  }
   if (frame > in_period + duration + out_period) {
     return -1;
   }
@@ -228,7 +233,7 @@ void swirl_tick(float dt) {
 
 byte swirl_next_frame(pattern* p, pixel* pixels) {
   int x = p->frame;
-  short alpha = get_alpha_or_terminate(x, 3*SEC, 2*60*SEC, 10*SEC);
+  short alpha = get_alpha_or_terminate(x, 5*SEC, 2*60*SEC, 10*SEC);
 
   static int left_outer_eye_start = 182;
   static int right_outer_eye_start = 182 + 22 + 13 + 12 + 6;
@@ -293,7 +298,7 @@ byte swirl_next_frame(pattern* p, pixel* pixels) {
 
 byte rabbit_sine_next_frame(pattern* p, pixel* pixels) {
     int frame = p->frame;
-    short alpha = get_alpha_or_terminate(frame, 10*SEC, 60*SEC, 10*SEC);
+    short alpha = get_alpha_or_terminate(frame, 5*SEC, 2*60*SEC, 10*SEC);
 
     int r,g,b,temp;
 
@@ -454,8 +459,8 @@ byte electric_next_frame(pattern* p, pixel* pixels) {
   int posx;
   int orientation;
 
-  short alpha = get_alpha_or_terminate(p->frame, 1*SEC, 2*60*SEC, 10*SEC);
-  int frame = p->frame - 9*SEC;
+  short alpha = get_alpha_or_terminate(p->frame, 2*SEC, 2*60*SEC, 10*SEC);
+  int frame = p->frame - 4*SEC;
 
   for(i=0;i<9000;i++) {
     temp_pixels[i]=0;
@@ -524,7 +529,7 @@ squares_color squares_bg;
 int squares_blinktimer;
 
 byte squares_next_frame(pattern* p, pixel* pixels) {
-  short alpha = get_alpha_or_terminate(p->frame, 4*SEC, 60*SEC, 4*SEC);
+  short alpha = get_alpha_or_terminate(p->frame, 5*SEC, 2*60*SEC, 10*SEC);
   int frame = p->frame;
 
   if (frame == 0) {
@@ -632,7 +637,7 @@ void squares_move_sprites(void) {
 // "plasma", by Ka-Ping Yee ================================================
 
 byte plasma_next_frame(pattern* p, pixel* pixels) {
-  short alpha = get_alpha_or_terminate(p->frame, 10*SEC, 60*SEC, 10*SEC);
+  short alpha = get_alpha_or_terminate(p->frame, 5*SEC, 2*60*SEC, 10*SEC);
   float f = p->frame * 0.1;
 
   for (int r = 0; r < NUM_ROWS; r++) {
@@ -673,18 +678,18 @@ byte ripple_next_frame(pattern* p, pixel* pixels) {
   int rmax;
   int pixnum;
 
-  short alpha = get_alpha_or_terminate(p->frame, 2*SEC, 60*SEC, 10*SEC);
-  int frame = p->frame - 15*SEC;
+  short alpha = get_alpha_or_terminate(p->frame, 5*SEC, 2*60*SEC, 10*SEC);
+  int frame = p->frame - 10*SEC;
 
-  for(j=0;i<9000;i++) {
+  for(i=0;i<9000;i++) {
     temp_pixels[i]=0;
   }
 
   if(frame>=0) {
     if(frame%32==0) {
-      red[nnext]=rand()%100+56;
-      green[nnext]=rand()%100+56;
-      blue[nnext]=rand()%100+56;
+      red[nnext]=rand()%100+26;
+      green[nnext]=rand()%100+26;
+      blue[nnext]=rand()%100+26;
       radius[nnext]=0;
       posx[nnext]=rand()%120;
       posy[nnext]=rand()%25+50;
@@ -981,7 +986,7 @@ unsigned char pond_env_map[2400];
 typedef unsigned short word;
 
 byte pond_next_frame(pattern* p, pixel* pixels) {
-  short alpha = get_alpha_or_terminate(p->frame, 10*SEC, 2*60*SEC, 15*SEC);
+  short alpha = get_alpha_or_terminate(p->frame, 10*SEC, 2*60*SEC, 10*SEC);
   int f = p->frame;
 
   float t = POND_TIME_SPEEDUP * (float) f / FPS;
@@ -1065,10 +1070,10 @@ pattern BASE_PATTERN = {"base", base_next_frame, 0};
 
 #define NUM_PATTERNS 8
 pattern PATTERNS[] = {
-  {"pond", pond_next_frame, 0},
   {"swirl", swirl_next_frame, 0},
   {"rabbit-rainbow-twist", rabbit_rainbow_twist_next_frame, 0},
   {"ripple", ripple_next_frame, 0},
+  {"pond", pond_next_frame, 0},
   {"plasma", plasma_next_frame, 0},
   {"squares", squares_next_frame, 0},
   {"rabbit-sine", rabbit_sine_next_frame, 0},
@@ -1082,6 +1087,7 @@ static pattern* curp = NULL;
 
 void activate_pattern(pattern* p) {
   printf("\nactivating %s\n", p->name);
+  next_pattern_override_start = -1;
   curp = p;
   curp->frame = 0;
 }
@@ -1142,7 +1148,9 @@ void next_frame(int frame) {
   }
 
   if (strcmp(get_button_sequence(), "abxbx") == 0) {
-    curp = NULL;
+    if (curp) {
+      next_pattern_override_start = curp->frame;
+    }
     time_to_next_pattern = 0;
     clear_button_sequence();
   }
