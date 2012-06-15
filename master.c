@@ -1137,6 +1137,13 @@ void next_frame(int frame) {
     midi_set_control_with_pickup(5, 64);
   }
 
+  if (frame % 100 == 0) {
+    midi_set_note(16, 127);
+  }
+  if (frame % 100 == 1) {
+    midi_set_note(16, 0);
+  }
+
   base_next_frame(&BASE_PATTERN, pixels);
   BASE_PATTERN.frame += 1;
 
