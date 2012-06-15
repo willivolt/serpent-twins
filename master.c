@@ -183,7 +183,7 @@ byte base_next_frame(pattern* p, pixel* pixels) {
 
 #define SWIRL_DUTY_CYCLE_ON 120
 #define SWIRL_DUTY_CYCLE_OFF 120
-#define SWIRL_IMPULSE_START (10*SEC)
+#define SWIRL_IMPULSE_START (30*SEC)
 
 #define SWIRL_TICKS_PER_FRAME 10 
 #define SWIRL_SPRING_CONST 400  // kg/s^2
@@ -193,31 +193,35 @@ float swirl_position[NUM_ROWS];  // rev
 float swirl_velocity[NUM_ROWS];  // rev/s
 int swirl_auto_impulse = 1;
 float swirl_button_force = 30;
-float swirl_restore_factor = 1;
+float swirl_restore_factor = 0;
 float swirl_restore_center = 0;
 float swirl_auto_impulse_period = 40;
 float swirl_auto_impulse_amplitude = 0.5;
 
 void swirl_tick(float dt) {
-  float friction_force = 0.05 + read_button('y')*0.2;
+  float friction_force = 0.1; // 05 + read_button('y')*0.2;
   float friction_min_velocity = friction_force/SWIRL_MASS * dt;
+  float spring = midi_get_control(7) / 100.0 + 0.5;
+  spring = spring * spring;
+  spring = SWIRL_SPRING_CONST * spring * spring;
 
   for (int i = 0; i < NUM_ROWS; i++) {
     float force;
     if (i == 0) {
       force = accel_right()*0.7 +
           (read_button('b') - read_button('a'))*swirl_button_force;
-      if (force < -25 || force > 25) {
+      if (force < -25 || force > 25 || midi_get_control(8) != 64) {
         swirl_auto_impulse = 0;
       }
       if (swirl_auto_impulse) {
         continue;
       }
+      swirl_position[i] = (midi_get_control(8) - 64)/80.0;
     } else {
-      force = SWIRL_SPRING_CONST * (swirl_position[i-1] - swirl_position[i]);
+      force = spring * (swirl_position[i-1] - swirl_position[i]);
     }
     if (i < NUM_ROWS - 1) {
-      force += SWIRL_SPRING_CONST * (swirl_position[i+1] - swirl_position[i]);
+      force += spring * (swirl_position[i+1] - swirl_position[i]);
     }
     force += swirl_restore_factor * (swirl_restore_center - swirl_position[i]);
     if (swirl_velocity[i] > friction_min_velocity) {
@@ -242,6 +246,8 @@ byte swirl_next_frame(pattern* p, pixel* pixels) {
   static int inner_eye_length = 13;
 
   if (x == 0) {
+    midi_set_control_with_pickup(7, 40);
+    midi_set_control_with_pickup(8, 64);
     swirl_auto_impulse = 1;
     for (int i = 0; i < NUM_ROWS; i++) {
       swirl_position[i] = 0;
