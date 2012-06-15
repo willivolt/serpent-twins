@@ -1014,9 +1014,9 @@ byte pond_next_frame(pattern* p, pixel* pixels) {
       byte r = *(sunset++);
       byte g = *(sunset++);
       byte b = *(sunset++);
-      short rr = ((short) (r - 128))*1.2 + 128;
-      short gg = ((short) (g - 128))*1.2 + 128;
-      short bb = ((short) (b - 128))*1.2 + 128;
+      short rr = ((short) (r - 128))*1.0 + 128;
+      short gg = ((short) (g - 128))*1.0 + 128;
+      short bb = ((short) (b - 128))*1.0 + 128;
       *(p++) = rr < 0 ? 0 : rr > 255 ? 255 : rr;
       *(p++) = gg < 0 ? 0 : gg > 255 ? 255 : gg;
       *(p++) = bb < 0 ? 0 : bb > 255 ? 255 : bb;
@@ -1031,7 +1031,7 @@ byte pond_next_frame(pattern* p, pixel* pixels) {
 
   float duty_phase =
       t - ((int) (t / POND_DUTY_CYCLE_PERIOD) * POND_DUTY_CYCLE_PERIOD);
-  if (duty_phase >= 0 && duty_phase < POND_DUTY_CYCLE_ON && f > 20*SEC) {
+  if (duty_phase >= 0 && duty_phase < POND_DUTY_CYCLE_ON && f > 5*SEC) {
     if (pond_last_on == 0) {
       pond_drop_x = rand() % (NUM_ROWS - 1);
       pond_drop_y = rand() % NUM_COLUMNS;
@@ -1077,14 +1077,14 @@ pattern BASE_PATTERN = {"base", base_next_frame, 0};
 
 #define NUM_PATTERNS 8
 pattern PATTERNS[] = {
-  {"swirl", swirl_next_frame, 0},
-  {"rabbit-rainbow-twist", rabbit_rainbow_twist_next_frame, 0},
-  {"ripple", ripple_next_frame, 0},
   {"pond", pond_next_frame, 0},
-  {"plasma", plasma_next_frame, 0},
-  {"squares", squares_next_frame, 0},
   {"rabbit-sine", rabbit_sine_next_frame, 0},
+  {"rabbit-rainbow-twist", rabbit_rainbow_twist_next_frame, 0},
+  {"plasma", plasma_next_frame, 0},
   {"electric", electric_next_frame, 0},
+  {"ripple", ripple_next_frame, 0},
+  {"squares", squares_next_frame, 0},
+  {"swirl", swirl_next_frame, 0},
 };
 
 
@@ -1156,6 +1156,16 @@ void next_frame(int frame) {
       p[1] = x > 255 ? 255 : x;
       x = gain * (p[2] + (gain > 1 ? gain - 1 : 0));
       p[2] = x > 255 ? 255 : x;
+    }
+  }
+
+  for (int i = 0; i < NUM_PATTERNS; i++) {
+    if (midi_get_note(i + 1)) {
+      if (curp) {
+        next_pattern_override_start = curp->frame;
+      }
+      time_to_next_pattern = 0;
+      next_pattern = i;
     }
   }
 
