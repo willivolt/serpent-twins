@@ -26,6 +26,7 @@
 #endif
 
 #include "serpent.h"
+#include "midi.h"
 
 typedef struct {
   double x, y, z;
@@ -577,6 +578,7 @@ void idle(void) {
   if (!paused) {
     double now = get_time();
     if (now >= next_frame_time) {
+      midi_poll();
       next_frame(frame++);
       update_render_grid();
       display();
@@ -585,13 +587,24 @@ void idle(void) {
       tf += (tf < 10);
       ti = (ti + 1) % 11;
       time_buffer[ti] = now;
-      printf("frame %5d (%.1f fps)  %c%c%c%c  [%-10s]  ", frame,
-             tf/(now - time_buffer[(ti + 11 - tf) % 11]),
-             read_button('a') ? 'a' : ' ',
-             read_button('b') ? 'b' : ' ',
-             read_button('x') ? 'x' : ' ',
-             read_button('y') ? 'y' : ' ',
-             button_sequence);
+      printf("frame %5d (%4.1f fps)  [%c%c%c%c%c%c%c%c] %02x %02x %02x %02x %02x %02x %02x %02x  \r", frame,
+           tf/(now - time_buffer[(ti + 11 - tf) % 11]),
+           midi_get_note(1) > 0 ? '1' : ' ',
+           midi_get_note(2) > 0 ? '2' : ' ',
+           midi_get_note(3) > 0 ? '3' : ' ',
+           midi_get_note(4) > 0 ? '4' : ' ',
+           midi_get_note(5) > 0 ? '5' : ' ',
+           midi_get_note(6) > 0 ? '6' : ' ',
+           midi_get_note(7) > 0 ? '7' : ' ',
+           midi_get_note(8) > 0 ? '8' : ' ',
+	   midi_get_control(1),
+	   midi_get_control(2),
+	   midi_get_control(3),
+	   midi_get_control(4),
+	   midi_get_control(5),
+	   midi_get_control(6),
+	   midi_get_control(7),
+	   midi_get_control(8));
       if (accel_right() || accel_forward()) {
         printf("forward%+3d right%+3d\n", accel_forward(), accel_right());
       } else {
@@ -665,6 +678,12 @@ void init(void) {
 
   time_buffer[0] = get_time();
   next_frame_time = time_buffer[0] + 1.0/FPS;
+
+  midi_init();
+  midi_set_control_with_pickup(1, 32);
+  midi_set_control_with_pickup(2, 0);
+  midi_set_control_with_pickup(3, 0);
+  midi_set_control_with_pickup(4, 0);
 }
 
 /* The main public interface.  Implement next_frame() and call this. */

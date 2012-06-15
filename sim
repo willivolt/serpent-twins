@@ -29,7 +29,7 @@ fi
 name=${1%%.c}
 if [ ! -d bin ]; then mkdir bin; fi
 
-echo $CC $COPTS serpent_opengl.c $name.c -o bin/$name && \
-    $CC $COPTS serpent_opengl.c $name.c -o bin/$name && \
+echo $CC $COPTS serpent_opengl.c $name.c font.c midi.c -o bin/$name && \
+    $CC $COPTS serpent_opengl.c $name.c font.c midi.c -o bin/$name && \
     echo bin/$name && \
     bin/$name
