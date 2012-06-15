@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include "midi.h"
 
 #ifndef TYPEDEF_BYTE
 #define TYPEDEF_BYTE
@@ -55,6 +56,7 @@ void tcp_init() {
 
   while (sock < 0) {
     usleep(50000); /* 0.05 sec */
+    midi_set_note(16, 127);
     fp = fopen("/tmp/serpent", "r");
     if (!fp) {
       perror("Cannot read /tmp/serpent");

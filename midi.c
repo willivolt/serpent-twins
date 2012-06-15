@@ -107,19 +107,23 @@ void midi_poll() {
 
 void midi_set_note(byte note, byte velocity) {
   byte message[3];
-  message[0] = (velocity == 0) ? 0x80 : 0x90;
-  message[1] = note;
-  message[2] = (velocity == 0) ? 0x7f : velocity;
-  write(midi_out, message, 3);
+  if (midi_out >= 0) {
+    message[0] = (velocity == 0) ? 0x80 : 0x90;
+    message[1] = note;
+    message[2] = (velocity == 0) ? 0x7f : velocity;
+    write(midi_out, message, 3);
+  }
   midi_note[note] = velocity;
 }
 
 void midi_set_control(byte control, byte value) {
   byte message[3];
-  message[0] = 0xb0;
-  message[1] = control;
-  message[2] = value;
-  write(midi_out, message, 3);
+  if (midi_out >= 0) {
+    message[0] = 0xb0;
+    message[1] = control;
+    message[2] = value;
+    write(midi_out, message, 3);
+  }
   midi_control[control] = value;
 }
 
