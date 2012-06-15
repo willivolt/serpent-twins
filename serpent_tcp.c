@@ -277,10 +277,10 @@ int main(int argc, char* argv[]) {
   int clock_delay = 0;
   int time_buffer[11], ti = 0, tf = 0;
   int last_button_count = 0;
-  byte controls[9], notes[9];
   
   bzero(head, HEAD_PIXELS*3);
   bzero(segments, NUM_SEGS*(SEG_PIXELS + FIN_PIXELS)*3);
+
   midi_init();
   midi_set_control_with_pickup(1, 32);
   midi_set_control_with_pickup(2, 0);
@@ -324,11 +324,6 @@ int main(int argc, char* argv[]) {
     next_frame(frame++);
     set_lid_pixels();
 
-    for (i = 1; i < 9; i++) {
-      controls[i] = midi_get_control(i);
-      notes[i] = midi_get_note(i);
-    }
-
     tcp_put_pixels(1, head, HEAD_PIXELS);
     for (s = 0; s < NUM_SEGS; s++) {
       tcp_put_pixels(2 + s, segments[s], SEG_PIXELS + FIN_PIXELS + LID_PIXELS);
@@ -340,22 +335,22 @@ int main(int argc, char* argv[]) {
     time_buffer[ti] = now;
     printf("frame %5d (%4.1f fps)  [%c%c%c%c%c%c%c%c] %02x %02x %02x %02x %02x %02x %02x %02x  \r", frame,
            tf*1000.0/(now - time_buffer[(ti + 11 - tf) % 11]),
-           notes[1] > 0 ? '1' : ' ',
-           notes[2] > 0 ? '2' : ' ',
-           notes[3] > 0 ? '3' : ' ',
-           notes[4] > 0 ? '4' : ' ',
-           notes[5] > 0 ? '5' : ' ',
-           notes[6] > 0 ? '6' : ' ',
-           notes[7] > 0 ? '7' : ' ',
-           notes[8] > 0 ? '8' : ' ',
-	   controls[1],
-	   controls[2],
-	   controls[3],
-	   controls[4],
-	   controls[5],
-	   controls[6],
-	   controls[7],
-	   controls[8]);
+           midi_get_note(1) > 0 ? '1' : ' ',
+           midi_get_note(2) > 0 ? '2' : ' ',
+           midi_get_note(3) > 0 ? '3' : ' ',
+           midi_get_note(4) > 0 ? '4' : ' ',
+           midi_get_note(5) > 0 ? '5' : ' ',
+           midi_get_note(6) > 0 ? '6' : ' ',
+           midi_get_note(7) > 0 ? '7' : ' ',
+           midi_get_note(8) > 0 ? '8' : ' ',
+	   midi_get_control(1),
+	   midi_get_control(2),
+	   midi_get_control(3),
+	   midi_get_control(4),
+	   midi_get_control(5),
+	   midi_get_control(6),
+	   midi_get_control(7),
+	   midi_get_control(8));
     fflush(stdout);
 
     next_frame_time += 1000/FPS;
