@@ -53,8 +53,8 @@ void midi_poll() {
     if (midi_out > 0) printf("\nopened /tmp/midi.out\n");
   }
   FD_ZERO(&rfds);
-  FD_SET(midi_in, &rfds);
   while (midi_in >= 0) {
+    FD_SET(midi_in, &rfds);
     result = select(midi_in + 1, &rfds, NULL, NULL, &tv);
     if (result <= 0) {
       break;
