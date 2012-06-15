@@ -680,10 +680,6 @@ void init(void) {
   next_frame_time = time_buffer[0] + 1.0/FPS;
 
   midi_init();
-  midi_set_control_with_pickup(1, 32);
-  midi_set_control_with_pickup(2, 0);
-  midi_set_control_with_pickup(3, 0);
-  midi_set_control_with_pickup(4, 0);
 }
 
 /* The main public interface.  Implement next_frame() and call this. */
