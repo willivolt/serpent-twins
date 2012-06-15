@@ -14,6 +14,7 @@
 #include "total_control.h"
 #include "serpent.h"
 #include "tcp_pixels.h"
+#include "midi.h"
 
 static byte head[HEAD_PIXELS*3];
 static byte segments[NUM_SEGS][(SEG_PIXELS + FIN_PIXELS + LID_PIXELS)*3];
@@ -276,12 +277,22 @@ int main(int argc, char* argv[]) {
   int clock_delay = 0;
   int time_buffer[11], ti = 0, tf = 0;
   int last_button_count = 0;
-
+  byte barrel_brightness;
+  byte spotlight_brightness;
+  byte spotlight_size;
+  byte spotlight_position;
+  
   bzero(head, HEAD_PIXELS*3);
   bzero(segments, NUM_SEGS*(SEG_PIXELS + FIN_PIXELS)*3);
+  midi_init();
+  midi_set_control_with_pickup(1, 32);
+  midi_set_control_with_pickup(2, 0);
+  midi_set_control_with_pickup(3, 0);
+  midi_set_control_with_pickup(4, 0);
 
   while (1) {
     tcp_init();
+    midi_poll();
 
     if (frame % 10 == 0) {
       fp = fopen("/tmp/next_pattern", "r");
@@ -317,6 +328,12 @@ int main(int argc, char* argv[]) {
     next_frame(frame++);
     set_lid_pixels();
 
+    midi_poll();
+    barrel_brightness = midi_get_control(1);
+    spotlight_brightness = midi_get_control(2);
+    spotlight_size = midi_get_control(3);
+    spotlight_position = midi_get_control(4);
+
     tcp_put_pixels(1, head, HEAD_PIXELS);
     for (s = 0; s < NUM_SEGS; s++) {
       tcp_put_pixels(2 + s, segments[s], SEG_PIXELS + FIN_PIXELS + LID_PIXELS);
@@ -326,12 +343,12 @@ int main(int argc, char* argv[]) {
     tf += (tf < 10);
     ti = (ti + 1) % 11;
     time_buffer[ti] = now;
-    printf("frame %5d (%.1f fps)  %c%c%c%c  [%-10s]  ", frame,
+    printf("frame %5d (%.1f fps)  %02x %02x %02x %02x  [%-10s]  ", frame,
            tf*1000.0/(now - time_buffer[(ti + 11 - tf) % 11]),
-           read_button('a') ? 'a' : ' ',
-           read_button('b') ? 'b' : ' ',
-           read_button('x') ? 'x' : ' ',
-           read_button('y') ? 'y' : ' ',
+           barrel_brightness,
+           spotlight_brightness,
+           spotlight_size,
+           spotlight_position,
            button_sequence);
     if (accel_right() || accel_forward()) {
       printf("forward%+3d right%+3d\n", accel_forward(), accel_right());
