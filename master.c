@@ -30,6 +30,7 @@
 #define SEC FPS  // use this for animation time parameters
 //#define SEC 6  // use this to speed up by a factor of 10 for testing
 
+float last_frame = 0;
 
 // Pixel manipulation ======================================================
 
@@ -74,7 +75,7 @@ long __value;
 // Common initialization ===================================================
 
 byte ease[257];
-#define EASE(frame, period) ease[((frame) << 8) / (period)]
+#define EASE(frame, period) ease[(int) (((frame) * 256) / (period))]
 
 float sin_table[256];
 #define SIN(n) sin_table[((int) (n)) & 0xff]
@@ -100,13 +101,13 @@ typedef byte next_frame_func(struct pattern* p, pixel* pixels);
 struct pattern {
   char* name;
   next_frame_func* next_frame;
-  long frame;
+  float frame;
 };
 typedef struct pattern pattern;
 int next_pattern_override_start = -1;
 
 short transition_alpha(
-    long frame, long in_period, long duration, long out_period) {
+    float frame, long in_period, long duration, long out_period) {
   if (next_pattern_override_start > 0) {
     frame = frame - next_pattern_override_start + in_period + duration;
     out_period = 3*SEC;
@@ -283,8 +284,11 @@ byte swirl_next_frame(pattern* p, pixel* pixels) {
     swirl_restore_center = sum / NUM_ROWS;
   }
   
-  for (int t = 0; t < SWIRL_TICKS_PER_FRAME; t++) {
-    swirl_tick(1.0/FPS/SWIRL_TICKS_PER_FRAME);
+  if (p->frame != last_frame) {
+    for (int t = 0; t < SWIRL_TICKS_PER_FRAME; t++) {
+      swirl_tick(1.0/FPS/SWIRL_TICKS_PER_FRAME);
+    }
+    last_frame = p->frame;
   }
 
   for (int i = 0; i < NUM_ROWS; i++) {
@@ -304,7 +308,7 @@ byte swirl_next_frame(pattern* p, pixel* pixels) {
 #define RABBIT_MAX_BRIGHT 255
 
 byte rabbit_sine_next_frame(pattern* p, pixel* pixels) {
-    int frame = p->frame;
+    float frame = p->frame;
     short alpha = get_alpha_or_terminate(frame, 5*SEC, 2*60*SEC, 10*SEC);
 
     int r,g,b,temp;
@@ -474,7 +478,7 @@ byte electric_next_frame(pattern* p, pixel* pixels) {
   }
 
   if(frame>=0) {
-    if(frame%10==0) {
+    if(frame%10==0 && frame != last_frame) {
       inv_velocity[nnext]=1000/(frame%1000+1);
       inv_omega[nnext]=333/(frame%333+1);
       t_not[nnext]=frame;
@@ -492,6 +496,8 @@ byte electric_next_frame(pattern* p, pixel* pixels) {
       orientation=(frame-t_not[i])/inv_omega[i]%3;
       electric_draw_locus(posx,orientation,temp_pixels);
     }
+
+    last_frame = frame;
   }
 
   byte* t = temp_pixels;
@@ -566,7 +572,9 @@ byte squares_next_frame(pattern* p, pixel* pixels) {
       squares_bg.r = squares_bg.g = squares_bg.b = 0;
       break;
   }
-  squares_blinktimer--;
+  if (frame != last_frame) {
+    squares_blinktimer--;
+  }
       
     for (int i = 0; i < NUM_PIXELS; i++) {
       int x = (i % NUM_COLUMNS);  // theta.  0 to 24
@@ -583,7 +591,11 @@ byte squares_next_frame(pattern* p, pixel* pixels) {
       paint_rgb(pixels, i, s->r, s->g, s->b, alpha);
     }
   }
-  squares_move_sprites();
+
+  if (frame != last_frame) {
+    squares_move_sprites();
+  }
+  last_frame = frame;
 
   return 1;
 }
@@ -693,7 +705,7 @@ byte ripple_next_frame(pattern* p, pixel* pixels) {
   }
 
   if(frame>=0) {
-    if(frame%32==0) {
+    if(frame%32==0 && frame != last_frame) {
       red[nnext]=rand()%100+26;
       green[nnext]=rand()%100+26;
       blue[nnext]=rand()%100+26;
@@ -709,12 +721,13 @@ byte ripple_next_frame(pattern* p, pixel* pixels) {
       }
     }
  
-    for(i=0;i<nmax;i++) {
-      radius[i]+=1;
-      red[i]=red[i]*49/50;
-      green[i]=green[i]*49/50;
-      blue[i]=blue[i]*49/50;
- 
+    if (frame != last_frame) {
+      for(i=0;i<nmax;i++) {
+        radius[i]+=1;
+        red[i]=red[i]*49/50;
+        green[i]=green[i]*49/50;
+        blue[i]=blue[i]*49/50;
+      }
     }
  
     for(k=0;k<nmax;k++) {
@@ -771,6 +784,8 @@ byte ripple_next_frame(pattern* p, pixel* pixels) {
     paint_rgb(pixels, i, r, g, b, alpha); 
   }
 
+  last_frame = frame;
+
   return 1;
 }
 
@@ -788,7 +803,7 @@ float min(float a, float b) {
 }
 
 byte rabbit_rainbow_twist_next_frame(pattern* p, pixel* pixels) {
-    int frame = p->frame;
+    float frame = p->frame;
     short alpha = get_alpha_or_terminate(frame, 10*SEC, 3*60*SEC, 10*SEC);
 
     // coordinates
@@ -1029,32 +1044,35 @@ byte pond_next_frame(pattern* p, pixel* pixels) {
     }
   }
 
-  float duty_phase =
-      t - ((int) (t / POND_DUTY_CYCLE_PERIOD) * POND_DUTY_CYCLE_PERIOD);
-  if (duty_phase >= 0 && duty_phase < POND_DUTY_CYCLE_ON && f > 5*SEC) {
-    if (pond_last_on == 0) {
-      pond_drop_x = rand() % (NUM_ROWS - 1);
-      pond_drop_y = rand() % NUM_COLUMNS;
-      pond_drop_impulse = -pond_drop_impulse;
+  if (p->frame != last_frame) {
+    float duty_phase =
+        t - ((int) (t / POND_DUTY_CYCLE_PERIOD) * POND_DUTY_CYCLE_PERIOD);
+    if (duty_phase >= 0 && duty_phase < POND_DUTY_CYCLE_ON && f > 5*SEC) {
+      if (pond_last_on == 0) {
+        pond_drop_x = rand() % (NUM_ROWS - 1);
+        pond_drop_y = rand() % NUM_COLUMNS;
+        pond_drop_impulse = -pond_drop_impulse;
+      }
+      float k = sin(duty_phase/POND_DUTY_CYCLE_ON*M_PI);
+      pond_velocity[pond_drop_x][pond_drop_y] += pond_drop_impulse*k;
+      pond_velocity[pond_drop_x][(pond_drop_y + 1) % NUM_COLUMNS] +=
+          pond_drop_impulse*k;
+      pond_velocity[pond_drop_x + 1][pond_drop_y] += pond_drop_impulse*k;
+      pond_velocity[pond_drop_x + 1][(pond_drop_y + 1) % NUM_COLUMNS] +=
+          pond_drop_impulse*k;
+      pond_last_on = 1;
+    } else {
+      pond_last_on = 0;
     }
-    float k = sin(duty_phase/POND_DUTY_CYCLE_ON*M_PI);
-    pond_velocity[pond_drop_x][pond_drop_y] += pond_drop_impulse*k;
-    pond_velocity[pond_drop_x][(pond_drop_y + 1) % NUM_COLUMNS] +=
-        pond_drop_impulse*k;
-    pond_velocity[pond_drop_x + 1][pond_drop_y] += pond_drop_impulse*k;
-    pond_velocity[pond_drop_x + 1][(pond_drop_y + 1) % NUM_COLUMNS] +=
-        pond_drop_impulse*k;
-    pond_last_on = 1;
-  } else {
-    pond_last_on = 0;
+    for (int j = 0; j < NUM_COLUMNS; j++) {
+      pond_position[0][j] = 0;
+      pond_position[NUM_ROWS - 1][j] = 0;
+    }
+    for (int t = 0; t < POND_TICKS_PER_FRAME; t++) {
+      pond_tick(POND_TIME_SPEEDUP * 1.0/FPS/POND_TICKS_PER_FRAME);
+    }
   }
-  for (int j = 0; j < NUM_COLUMNS; j++) {
-    pond_position[0][j] = 0;
-    pond_position[NUM_ROWS - 1][j] = 0;
-  }
-  for (int t = 0; t < POND_TICKS_PER_FRAME; t++) {
-    pond_tick(POND_TIME_SPEEDUP * 1.0/FPS/POND_TICKS_PER_FRAME);
-  }
+
   for (int i = 0; i < NUM_ROWS; i++) {
     for (int j = 0; j < NUM_COLUMNS; j++) {
       int e = (pond_position[i][j]-pond_position[i+1][j])*400 +
@@ -1066,6 +1084,8 @@ byte pond_next_frame(pattern* p, pixel* pixels) {
                 ep[0]*200/255, ep[1]*240/255, ep[2]*240/255, alpha);
     }
   }
+
+  last_frame = p->frame;
 
   return 1;
 }
@@ -1110,14 +1130,22 @@ void next_frame(int frame) {
 
   if (frame == 0) {
     init_tables();
+    midi_set_control_with_pickup(1, 32);
+    midi_set_control_with_pickup(2, 0);
+    midi_set_control_with_pickup(3, 0);
+    midi_set_control_with_pickup(4, 0);
+    midi_set_control_with_pickup(5, 64);
   }
 
   base_next_frame(&BASE_PATTERN, pixels);
-  BASE_PATTERN.frame++;
+  BASE_PATTERN.frame += 1;
 
   if (curp) {
-    if ((curp->next_frame)(curp, pixels)) {
-      curp->frame++;
+    if (curp->next_frame(curp, pixels)) {
+      float frame_rate = exp((midi_get_control(5) - 64)/32.0);
+      if (midi_get_control(5) > 0) {
+        curp->frame += frame_rate;
+      }
     } else {
       printf("\nfinished %s\n", curp->name);
       curp = NULL;
@@ -1149,13 +1177,13 @@ void next_frame(int frame) {
   for (int r = 0; r < NUM_ROWS; r++) {
     float gain = brightness[r];
     for (int c = 0; c < NUM_COLUMNS; c++) {
-      byte* p = pixels + pixel_index(r, c);
-      float x = gain * (p[0] + (gain > 1 ? gain - 1 : 0));
-      p[0] = x > 255 ? 255 : x;
-      x = gain * (p[1] + (gain > 1 ? gain - 1 : 0));
-      p[1] = x > 255 ? 255 : x;
-      x = gain * (p[2] + (gain > 1 ? gain - 1 : 0));
-      p[2] = x > 255 ? 255 : x;
+      pixel* p = pixels + pixel_index(r, c);
+      float x = gain * (p->r + (gain > 1 ? gain - 1 : 0));
+      p->r = x > 255 ? 255 : x;
+      x = gain * (p->g + (gain > 1 ? gain - 1 : 0));
+      p->g = x > 255 ? 255 : x;
+      x = gain * (p->b + (gain > 1 ? gain - 1 : 0));
+      p->b = x > 255 ? 255 : x;
     }
   }
 

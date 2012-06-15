@@ -282,10 +282,6 @@ int main(int argc, char* argv[]) {
   bzero(segments, NUM_SEGS*(SEG_PIXELS + FIN_PIXELS)*3);
 
   midi_init();
-  midi_set_control_with_pickup(1, 32);
-  midi_set_control_with_pickup(2, 0);
-  midi_set_control_with_pickup(3, 0);
-  midi_set_control_with_pickup(4, 0);
 
   while (1) {
     tcp_init();
