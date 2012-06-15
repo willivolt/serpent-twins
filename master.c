@@ -1167,7 +1167,7 @@ void next_frame(int frame) {
   // control 3: spotlight size
   // control 4: spotlight position
   float dim_level = midi_get_control(1)/127.0;
-  float spot_gain = (midi_get_control(2)/127.0)*5;
+  float spot_gain = (midi_get_control(3)/127.0)*5;
   float spot_size = 4000.0 / (midi_get_control(3)*0.02*midi_get_control(3) + 10);
   float spot_pos = (midi_get_control(4)/127.0)*1.4 - 0.2;
   for (int r = 0; r < NUM_ROWS; r++) {
