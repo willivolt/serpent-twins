@@ -277,10 +277,7 @@ int main(int argc, char* argv[]) {
   int clock_delay = 0;
   int time_buffer[11], ti = 0, tf = 0;
   int last_button_count = 0;
-  byte barrel_brightness;
-  byte spotlight_brightness;
-  byte spotlight_size;
-  byte spotlight_position;
+  byte controls[9], notes[9];
   
   bzero(head, HEAD_PIXELS*3);
   bzero(segments, NUM_SEGS*(SEG_PIXELS + FIN_PIXELS)*3);
@@ -310,7 +307,6 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    read_accelerometer("/tmp/.accel", frame);
     while (now < next_frame_time) {
       now = get_milliseconds();
     }
@@ -328,11 +324,10 @@ int main(int argc, char* argv[]) {
     next_frame(frame++);
     set_lid_pixels();
 
-    midi_poll();
-    barrel_brightness = midi_get_control(1);
-    spotlight_brightness = midi_get_control(2);
-    spotlight_size = midi_get_control(3);
-    spotlight_position = midi_get_control(4);
+    for (i = 1; i < 9; i++) {
+      controls[i] = midi_get_control(i);
+      notes[i] = midi_get_note(i);
+    }
 
     tcp_put_pixels(1, head, HEAD_PIXELS);
     for (s = 0; s < NUM_SEGS; s++) {
@@ -343,18 +338,24 @@ int main(int argc, char* argv[]) {
     tf += (tf < 10);
     ti = (ti + 1) % 11;
     time_buffer[ti] = now;
-    printf("frame %5d (%.1f fps)  %02x %02x %02x %02x  [%-10s]  ", frame,
+    printf("frame %5d (%4.1f fps)  [%c%c%c%c%c%c%c%c] %02x %02x %02x %02x %02x %02x %02x %02x  \r", frame,
            tf*1000.0/(now - time_buffer[(ti + 11 - tf) % 11]),
-           barrel_brightness,
-           spotlight_brightness,
-           spotlight_size,
-           spotlight_position,
-           button_sequence);
-    if (accel_right() || accel_forward()) {
-      printf("forward%+3d right%+3d\n", accel_forward(), accel_right());
-    } else {
-      printf("\r");
-    }
+           notes[1] > 0 ? '1' : ' ',
+           notes[2] > 0 ? '2' : ' ',
+           notes[3] > 0 ? '3' : ' ',
+           notes[4] > 0 ? '4' : ' ',
+           notes[5] > 0 ? '5' : ' ',
+           notes[6] > 0 ? '6' : ' ',
+           notes[7] > 0 ? '7' : ' ',
+           notes[8] > 0 ? '8' : ' ',
+	   controls[1],
+	   controls[2],
+	   controls[3],
+	   controls[4],
+	   controls[5],
+	   controls[6],
+	   controls[7],
+	   controls[8]);
     fflush(stdout);
 
     next_frame_time += 1000/FPS;
