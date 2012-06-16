@@ -1127,13 +1127,14 @@ void next_frame(int frame) {
   static int inner_eye_length = 13;
   static int next_pattern = 0;
   static int red_thing = -10;
+  static float pulse_gain = 0;
 
   if (frame == 0) {
     init_tables();
     midi_set_control_with_pickup(1, 32);
     midi_set_control_with_pickup(2, 0);
     midi_set_control_with_pickup(3, 0);
-    midi_set_control_with_pickup(4, 0);
+    midi_set_control_with_pickup(4, 64);
     midi_set_control_with_pickup(5, 64);
   }
 
@@ -1168,13 +1169,23 @@ void next_frame(int frame) {
     }
   }
 
+  if (midi_get_note(12) > 0) {
+    float value = (midi_get_note(12)/127.0)*500;
+    if (pulse_gain >= value) {
+      pulse_gain *= 1.05;
+    } else pulse_gain = value;
+  } else {
+    pulse_gain *= 0.7;
+  }
+
   float brightness[NUM_ROWS];
   // control 1: dim all barrels
   // control 2: spotlight brightness
   // control 3: spotlight size
   // control 4: spotlight position
   float dim_level = midi_get_control(1)/127.0;
-  float spot_gain = (midi_get_control(3)/127.0)*5;
+  dim_level = dim_level*dim_level;
+  float spot_gain = (midi_get_control(3)/127.0)*5 + pulse_gain;
   float spot_size = 4000.0 / (midi_get_control(3)*0.02*midi_get_control(3) + 10);
   float spot_pos = (midi_get_control(4)/127.0)*1.4 - 0.2;
   for (int r = 0; r < NUM_ROWS; r++) {
