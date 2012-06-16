@@ -105,9 +105,13 @@ struct pattern {
 };
 typedef struct pattern pattern;
 int next_pattern_override_start = -1;
+int auto_advance = 0;
 
 short transition_alpha(
     float frame, long in_period, long duration, long out_period) {
+  if (!auto_advance) {
+    duration = 60*60*SEC;
+  }
   if (next_pattern_override_start > 0) {
     frame = frame - next_pattern_override_start + in_period + duration;
     out_period = 3*SEC;
@@ -1127,7 +1131,7 @@ void next_frame(int frame) {
   static int inner_eye_length = 13;
   static int next_pattern = 0;
   static int red_thing = -10;
-  static float pulse_gain = 0;
+  static float pulses[5] = {0, 0, 0, 0, 0};
 
   if (frame == 0) {
     init_tables();
@@ -1169,38 +1173,60 @@ void next_frame(int frame) {
     }
   }
 
-  if (midi_get_note(12) > 0) {
-    float value = (midi_get_note(12)/127.0)*500;
-    if (pulse_gain >= value) {
-      pulse_gain *= 1.05;
-    } else pulse_gain = value;
-  } else {
-    pulse_gain *= 0.7;
+  for (int i = 0; i < 5; i++) {
+    if (midi_get_control(9 + i) > 0) {
+      float value = (midi_get_control(9 + i)/127.0)*60;
+      if (pulses[i] >= value) {
+        pulses[i] *= 1.05;
+      } else pulses[i] = value;
+    } else {
+      pulses[i] *= 0.7;
+      if (pulses[i] < 0.1) { pulses[i] = 0; }
+    }
   }
 
   float brightness[NUM_ROWS];
   // control 1: dim all barrels
-  // control 2: spotlight brightness
-  // control 3: spotlight size
+  // control 2: desaturate
+  // control 3: spotlight size & brightness
   // control 4: spotlight position
   float dim_level = midi_get_control(1)/127.0;
+  float desat_level = midi_get_control(2)/127.0;
   dim_level = dim_level*dim_level;
-  float spot_gain = (midi_get_control(3)/127.0)*5 + pulse_gain;
-  float spot_size = 4000.0 / (midi_get_control(3)*0.02*midi_get_control(3) + 10);
+  int pulse_value = midi_get_control(3) + pulses[4];
+  float spot_gain = (pulse_value/127.0)*5;
+  float spot_size = 4000.0 / (pulse_value*0.02*pulse_value + 10);
   float spot_pos = (midi_get_control(4)/127.0)*1.4 - 0.2;
   for (int r = 0; r < NUM_ROWS; r++) {
     float dist = fabs(((float) r)/NUM_ROWS - spot_pos)*spot_size;
     brightness[r] = dim_level + spot_gain*spot_gain/(1 + dist*dist*dist*dist);
   }
+  for (int i = 0; i < 4; i++) {
+    if (pulses[i] > 0) {
+      spot_pos = 0.1 + i*0.2;
+      spot_gain = (pulses[i]/127.0)*5;
+      spot_size = 4000.0 / (pulses[i]*0.02*pulses[i] + 10);
+      for (int r = 0; r < NUM_ROWS; r++) {
+        float dist = fabs(((float) r)/NUM_ROWS - spot_pos)*spot_size;
+        brightness[r] += spot_gain*spot_gain/(1 + dist*dist*dist*dist);
+      }
+    }
+  }
+  spot_pos = 0;
   for (int r = 0; r < NUM_ROWS; r++) {
     float gain = brightness[r];
     for (int c = 0; c < NUM_COLUMNS; c++) {
       pixel* p = pixels + pixel_index(r, c);
-      float x = gain * (p->r + (gain > 1 ? gain - 1 : 0));
+      float red = p->r, green = p->g, blue = p->b;
+      float white = 0.3*red + 0.59*green + 0.11*blue;
+      red = white*desat_level + red*(1 - desat_level);
+      green = white*desat_level + green*(1 - desat_level);
+      blue = white*desat_level + blue*(1 - desat_level);
+      float x = gain * (red + (gain > 1 ? gain - 1 : 0));
       p->r = x > 255 ? 255 : x;
-      x = gain * (p->g + (gain > 1 ? gain - 1 : 0));
+      x = gain * (green + (gain > 1 ? gain - 1 : 0));
       p->g = x > 255 ? 255 : x;
-      x = gain * (p->b + (gain > 1 ? gain - 1 : 0));
+      x = gain * (blue + (gain > 1 ? gain - 1 : 0));
       p->b = x > 255 ? 255 : x;
     }
   }
