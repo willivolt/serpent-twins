@@ -1173,6 +1173,20 @@ void next_frame(int frame) {
     }
   }
 
+  // External pulse source
+  FILE* fp = fopen("/tmp/pulses", "r");
+  if (fp) {
+    unsigned char pulse_data[5];
+    fread(pulse_data, 5, 1, fp);
+    fclose(fp);
+    unlink("/tmp/pulses");
+    for (int i = 0; i < 5; i++) {
+      if (pulse_data[i] >= pulses[i]) {
+        pulses[i] = pulse_data[i];
+      }
+    }
+  }
+
   for (int i = 0; i < 5; i++) {
     if (midi_get_control(9 + i) > 0) {
       float value = (midi_get_control(9 + i)/127.0)*60;
@@ -1203,7 +1217,7 @@ void next_frame(int frame) {
   }
   for (int i = 0; i < 4; i++) {
     if (pulses[i] > 0) {
-      spot_pos = 0.1 + i*0.2;
+      spot_pos = 0.2 + i*0.2;
       spot_gain = (pulses[i]/127.0)*5;
       spot_size = 4000.0 / (pulses[i]*0.02*pulses[i] + 10);
       for (int r = 0; r < NUM_ROWS; r++) {
