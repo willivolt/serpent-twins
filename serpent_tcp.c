@@ -288,22 +288,6 @@ int main(int argc, char* argv[]) {
     tcp_init();
     midi_poll();
 
-    if (frame % 10 == 0) {
-      fp = fopen("/tmp/next_pattern", "r");
-      if (fp) {
-        fclose(fp);
-        strcpy(button_sequence, "abxbx");
-        unlink("/tmp/next_pattern");
-      }
-
-      fp = fopen("/tmp/red_thing", "r");
-      if (fp) {
-        fclose(fp);
-        strcpy(button_sequence, "ababxxx");
-        unlink("/tmp/red_thing");
-      }
-    }
-
     while (now < next_frame_time) {
       now = get_milliseconds();
     }
