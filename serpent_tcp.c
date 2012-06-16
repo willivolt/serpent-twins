@@ -267,7 +267,7 @@ int accel_forward() {
 }
 
 int main(int argc, char* argv[]) {
-  static int fcount = 0;
+  static float fcount = 0;
   int frame = 0;
   int start_time = get_milliseconds();
   int next_frame_time = start_time + 1000/FPS;
@@ -309,11 +309,16 @@ int main(int argc, char* argv[]) {
 
     // White fin chaser light
     int n = NUM_SEGS*FIN_PIXELS;
-    fcount = (fcount + 1) % n;
+    float speed = (midi_get_control(6) - 64)/32.0;
+    fcount += speed;
+    if (fcount < -n/4) { fcount += n; }
+    if (fcount > 3*n/4) { fcount -= n; }
     for (i = 0; i < n; i++) {
-      fins[i*3] = (i == fcount) ? 255 : 0;
-      fins[i*3 + 1] = (i == fcount) ? 255 : 0;
-      fins[i*3 + 2] = (i == fcount) ? 255 : 0;
+      float dist = (fcount - (i % (n/2))) / speed;
+      int fin_bright = (int) (255.0/(1 + dist*dist));
+      fins[i*3 + 0] = fin_bright;
+      fins[i*3 + 1] = fin_bright;
+      fins[i*3 + 2] = fin_bright;
     }
     put_fin_pixels(fins, n);
 
