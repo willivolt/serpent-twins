@@ -282,6 +282,7 @@ int main(int argc, char* argv[]) {
   bzero(segments, NUM_SEGS*(SEG_PIXELS + FIN_PIXELS)*3);
 
   midi_init();
+  midi_set_control(6, 80);
 
   while (1) {
     tcp_init();
@@ -309,13 +310,23 @@ int main(int argc, char* argv[]) {
 
     // White fin chaser light
     int n = NUM_SEGS*FIN_PIXELS;
-    float speed = (midi_get_control(6) - 64)/32.0;
+    float speed = (midi_get_control(6) - 64)/20.0;
     fcount += speed;
-    if (fcount < -n/4) { fcount += n; }
-    if (fcount > 3*n/4) { fcount -= n; }
+    if (fcount < -n/2) { fcount += n; }
+    if (fcount > n/2) { fcount -= n; }
     for (i = 0; i < n; i++) {
-      float dist = (fcount - (i % (n/2))) / speed;
-      int fin_bright = (int) (255.0/(1 + dist*dist));
+      j = i;
+      float dist = (fcount - j) / (fabs(speed) + 1);
+      int fin_bright = (int) (600.0/(1 + dist*dist));
+      dist = (fcount - (j - n)) / speed;
+      fin_bright += (int) (600.0/(1 + dist*dist));
+      dist = (fcount - (j - n/2)) / speed;
+      fin_bright += (int) (600.0/(1 + dist*dist));
+      dist = (fcount - (j + n/2)) / speed;
+      fin_bright += (int) (600.0/(1 + dist*dist));
+      dist = (fcount - (j + n)) / speed;
+      fin_bright += (int) (600.0/(1 + dist*dist));
+      if (fin_bright > 255) fin_bright = 255;
       fins[i*3 + 0] = fin_bright;
       fins[i*3 + 1] = fin_bright;
       fins[i*3 + 2] = fin_bright;
