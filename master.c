@@ -1132,6 +1132,7 @@ void next_frame(int frame) {
   static int next_pattern = 0;
   static int red_thing = -10;
   static float pulses[5] = {0, 0, 0, 0, 0};
+  static int pulse_mode = 0;
 
   if (frame == 0) {
     init_tables();
@@ -1174,18 +1175,32 @@ void next_frame(int frame) {
   }
 
   // External pulse source
-  FILE* fp = fopen("/tmp/pulses", "r");
-  if (fp) {
-    unsigned char pulse_data[5];
-    fread(pulse_data, 5, 1, fp);
-    fclose(fp);
-    unlink("/tmp/pulses");
-    for (int i = 0; i < 5; i++) {
-      if (pulse_data[i] >= pulses[i]) {
-        pulses[i] = pulse_data[i];
+  if (pulse_mode) {
+    FILE* fp = fopen("/tmp/pulses", "r");
+    if (fp) {
+      unsigned char pdata[5];
+      fread(pdata, 5, 1, fp);
+      fclose(fp);
+      printf("\npulse: %02x %02x %02x %02x %02x\n",
+             pdata[0], pdata[1], pdata[2], pdata[3], pdata[4]);
+      unlink("/tmp/pulses");
+      if (pulse_mode == 1) {
+        for (int i = 0; i < 5; i++) {
+          if (pdata[i] >= pulses[i]) {
+            pulses[i] = pdata[i];
+          }
+        }
+      } else if (pulse_mode == 2) {
+        if (pdata[0] > pulses[4]) {
+          pulses[4] = pdata[0];
+        }
       }
     }
   }
+
+  if (midi_get_control(14)) { pulse_mode = 0; printf("\npulse_mode 0\n"); }
+  if (midi_get_control(15)) { pulse_mode = 1; printf("\npulse_mode 1\n"); }
+  if (midi_get_control(16)) { pulse_mode = 2; printf("\npulse_mode 2\n"); }
 
   for (int i = 0; i < 5; i++) {
     if (midi_get_control(9 + i) > 0) {
