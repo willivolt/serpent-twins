@@ -8,11 +8,28 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include "midi.h"
+#include "tcp_pixels.h"
 
 #ifndef TYPEDEF_BYTE
 #define TYPEDEF_BYTE
 typedef unsigned char byte;
 #endif
+
+#define ADDRESS_BROADCAST 0
+
+enum psoc_channel {
+  CHANNEL_LED = 0,
+  CHANNEL_COMMAND = 1
+};
+
+enum psoc_command {
+  CMD_NONE = 0,
+  CMD_BOOTLOAD = 1,
+  CMD_FORGET = 2,
+  CMD_PREPARE = 3,
+  CMD_COMMIT = 4,
+  CMD_TESTPATTERN = 5
+};
 
 int sock = -1;
 
@@ -70,11 +87,15 @@ void tcp_init() {
     }
     sock = tcp_connect(ipaddr, port);
   }
+  tcp_init_addresses();
 }
 
 void tcp_send_sync(const byte* buf, int len) {
   int sent = 0;
   int result;
+  if (sock < 0) {
+    tcp_init();
+  }
   while (sock >= 0 && sent < len) {
     result = send(sock, buf + sent, len - sent, 0);
     if (result < 0) {
@@ -83,6 +104,34 @@ void tcp_send_sync(const byte* buf, int len) {
       sock = -1;
     }
     sent += result;
+  }
+}
+
+void tcp_init_addresses() {
+  byte command[6];
+  byte address;
+
+  // Tell all nodes to forget their addresses.
+  command[0] = ADDRESS_BROADCAST;
+  command[1] = CHANNEL_COMMAND;
+  command[2] = 0;  // data length = 1 byte
+  command[3] = 1;  // data length = 1 byte
+  command[4] = CMD_FORGET;
+  tcp_send_sync(command, 5);
+
+  // Assign addresses to each node.
+  command[0] = ADDRESS_BROADCAST;
+  command[1] = CHANNEL_COMMAND;
+  command[2] = 0;  // data length = 2 bytes
+  command[3] = 2;  // data length = 2 bytes
+  for (address = 1; address < 63; address++) {
+    command[4] = CMD_PREPARE;
+    command[5] = address;
+    tcp_send_sync(command, 6);
+
+    command[4] = CMD_COMMIT;
+    command[5] = address;
+    tcp_send_sync(command, 6);
   }
 }
 
@@ -99,11 +148,12 @@ void tcp_put_pixels(byte address, byte* pixels, int n) {
     *dest++ = pixels[0];  // red
     pixels += 3;
   }
+  // Sometimes the last pixel doesn't get set; add three bytes for reliability.
   *dest++ = 0;
   *dest++ = 0;
   *dest++ = 0;
   header[0] = address;
-  header[1] = 0;
+  header[1] = CHANNEL_LED;
   header[2] = length >> 8;
   header[3] = length & 0xff;
   tcp_send_sync(header, 4);

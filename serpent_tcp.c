@@ -277,15 +277,17 @@ int main(int argc, char* argv[]) {
   int clock_delay = 0;
   int time_buffer[11], ti = 0, tf = 0;
   int last_button_count = 0;
-  
+
   bzero(head, HEAD_PIXELS*3);
   bzero(segments, NUM_SEGS*(SEG_PIXELS + FIN_PIXELS)*3);
+
+  // Assign addresses to all the barrels in the order they're connected.
+  tcp_init();
 
   midi_init();
   midi_set_control(6, 80);
 
   while (1) {
-    tcp_init();
     midi_poll();
 
     while (now < next_frame_time) {
