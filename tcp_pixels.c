@@ -143,9 +143,9 @@ void tcp_put_pixels(byte address, byte* pixels, int n) {
   byte* dest = tcp_buffer;
   int i;
   for (i = 0; i < n; i++) {
-    *dest++ = pixels[2];  // blue
-    *dest++ = pixels[1];  // green
     *dest++ = pixels[0];  // red
+    *dest++ = pixels[1];  // green
+    *dest++ = pixels[2];  // blue
     pixels += 3;
   }
   // Sometimes the last pixel doesn't get set; add three bytes for reliability.
