@@ -16,6 +16,10 @@
 #include "tcp_pixels.h"
 #include "midi.h"
 
+#define JULUNGGUL 0  // white serpent
+#define JORMUNGAND 1  // black serpent
+static byte serpent_mode = JULUNGGUL;
+
 static byte head[HEAD_PIXELS*3];
 static byte segments[NUM_SEGS][(SEG_PIXELS + FIN_PIXELS + LID_PIXELS)*3];
 static byte fins[NUM_SEGS*FIN_PIXELS*3];
@@ -47,6 +51,27 @@ static byte diagnostic_colours[11][3] = {
   {128, 0, 32}  // pink for segment 10
 };
 
+// LED sequences on the black serpent
+#define JORM_SPINE_FRONT 0
+#define JORM_SPINE_BACK 32
+#define JORM_SPINE_PIXELS 33
+#define JORM_FINS_BACK 33
+#define JORM_FINS_FRONT 42
+#define JORM_FIN_PIXELS 10
+#define JORM_RIGHT_FRONT 43
+#define JORM_RIGHT_BACK 70
+#define JORM_LEFT_FRONT 71
+#define JORM_LEFT_BACK 98
+#define JORM_SIDE_PIXELS 28
+#define JORM_SEG_PIXELS 99
+
+byte jormungand_segment[JORM_SEG_PIXELS*3];
+
+// On Jormungand, the spine pixels within a barrel alternate left and right.
+// On some barrels, the frontmost spine pixel is on the left; on other barrels
+// it's on the right.
+byte jorm_spine_front_is_left[9] = {1, 0, 1, 0, 1, 0, 1, 0, 0};
+
 void put_head_pixels(byte* pixels, int n) {
   memcpy(head, pixels, n*3);
 }
@@ -58,6 +83,7 @@ void put_segment_pixels(int segment, byte* pixels, int n) {
 void put_fin_pixels(byte* pixels, int n) {
   int s, b, i;
   byte* dest;
+
   for (s = 0; n > 0 && s < NUM_SEGS; s++) {
     dest = segments[s] + (SEG_PIXELS + FIN_PIXELS)*3;
     for (i = 0; n > 0 && i < FIN_PIXELS; i++) {
@@ -67,6 +93,71 @@ void put_fin_pixels(byte* pixels, int n) {
       dest[2] = *pixels++;
       n--;
     }
+  }
+}
+
+void get_column(pixel* segment, int c, pixel* column) {
+  int r;
+  for (r = 0; r < SEG_ROWS; r++) {
+    column[r] = segment[NUM_COLUMNS*r + (r % 2 ? NUM_COLUMNS - 1 - c : c)];
+  }
+}
+
+pixel rgb_interpolate(pixel a, pixel b, float f) {
+  float v;
+  pixel c;
+  v = a.r * (1.0 - f) + b.r * f;
+  c.r = (v < 0) ? 0 : (v > 255) ? 255 : v;
+  v = a.g * (1.0 - f) + b.g * f;
+  c.g = (v < 0) ? 0 : (v > 255) ? 255 : v;
+  v = a.b * (1.0 - f) + b.b * f;
+  c.b = (v < 0) ? 0 : (v > 255) ? 255 : v;
+  return c;
+}
+
+void remap_to_jormungand(int s, byte* segment, byte* jorm_segment) {
+  int i, k;
+  byte left;
+  pixel* column;
+  pixel left_column[NUM_ROWS], right_column[NUM_ROWS];
+  pixel* jorm_pixels = (pixel*) jorm_segment;
+  pixel* dest;
+  float t;
+
+  get_column((pixel*) segment, 20, left_column);
+  get_column((pixel*) segment, 4, right_column);
+
+  bzero(jorm_segment, JORM_SEG_PIXELS*3);
+  dest = jorm_pixels + JORM_SPINE_FRONT;
+  for (i = 0, left = jorm_spine_front_is_left[s];
+       i < JORM_SPINE_PIXELS; i++, left = !left) {
+    t = NUM_ROWS * ((float) i)/(JORM_SPINE_PIXELS - 1);
+    k = (int) t;
+    column = (left ? left_column : right_column);
+    *dest = rgb_interpolate(column[k], column[k + 1], t - k);
+    dest++;
+  }
+
+  get_column((pixel*) segment, 15, left_column);
+  get_column((pixel*) segment, 9, right_column);
+
+  dest = jorm_pixels + JORM_RIGHT_FRONT;
+  for (i = 0; i < JORM_SIDE_PIXELS; i++) {
+    t = (NUM_ROWS - 1) * (((float) i)/(JORM_SIDE_PIXELS - 1));
+    k = (int) t;
+    jorm_pixels[JORM_RIGHT_FRONT + i] =
+        rgb_interpolate(right_column[k], right_column[k + 1], t - k);
+    jorm_pixels[JORM_LEFT_FRONT + i] =
+        rgb_interpolate(left_column[k], left_column[k + 1], t - k);
+  }
+
+  column = ((pixel*) segment) + SEG_PIXELS;
+  for (i = 0; i < JORM_FIN_PIXELS; i++) {
+    t = (FIN_PIXELS - 1) * (((float) i)/(JORM_FIN_PIXELS - 1));
+    t = JORM_FIN_PIXELS - 1 - t;
+    k = (int) t;
+    jorm_pixels[JORM_FINS_BACK + i] =
+        rgb_interpolate(column[k], column[k + 1], t - k);
   }
 }
 
@@ -89,6 +180,10 @@ void set_lid_pixels() {
   byte* row;
   byte* lid;
   byte temp[6];
+  // The frontmost circle of barrel pixels starts at bottom and proceeds toward
+  // the serpent's right (clockwise if you are facing the barrel looking toward
+  // the tail).  The first 8 lid pixels start at the top and also proceed
+  // clockwise; the last lid pixel is in the center.
   for (s = 0; s < NUM_SEGS; s++) {
     row = segments[s];
     lid = segments[s] + (SEG_PIXELS + FIN_PIXELS)*3;
@@ -278,6 +373,8 @@ int main(int argc, char* argv[]) {
   int time_buffer[11], ti = 0, tf = 0;
   int last_button_count = 0;
 
+  serpent_mode = getenv("JORMUNGAND") ? JORMUNGAND : JULUNGGUL;
+
   bzero(head, HEAD_PIXELS*3);
   bzero(segments, NUM_SEGS*(SEG_PIXELS + FIN_PIXELS)*3);
 
@@ -320,11 +417,22 @@ int main(int argc, char* argv[]) {
     put_fin_pixels(fins, n);
 
     next_frame(frame++);
-    set_lid_pixels();
 
-    tcp_put_pixels(1, head, HEAD_PIXELS);
-    for (s = 0; s < NUM_SEGS; s++) {
-      tcp_put_pixels(2 + s, segments[s], SEG_PIXELS + FIN_PIXELS + LID_PIXELS);
+    switch (serpent_mode) {
+      case JULUNGGUL:
+        set_lid_pixels();
+        tcp_put_pixels(1, head, HEAD_PIXELS);
+        for (s = 0; s < NUM_SEGS; s++) {
+          tcp_put_pixels(2 + s, segments[s],
+                         SEG_PIXELS + FIN_PIXELS + LID_PIXELS);
+        }
+        break;
+      case JORMUNGAND:
+        for (s = 0; s < NUM_SEGS; s++) {
+          remap_to_jormungand(s, segments[s], jormungand_segment);
+          tcp_put_pixels(2 + s, jormungand_segment, JORM_SEG_PIXELS);
+        }
+        break;
     }
 
     now = get_milliseconds();
