@@ -154,7 +154,6 @@ void remap_to_jormungand(int s, byte* segment, byte* jorm_segment) {
   column = ((pixel*) segment) + SEG_PIXELS;
   for (i = 0; i < JORM_FIN_PIXELS; i++) {
     t = (FIN_PIXELS - 1) * (((float) i)/(JORM_FIN_PIXELS - 1));
-    t = JORM_FIN_PIXELS - 1 - t;
     k = (int) t;
     jorm_pixels[JORM_FINS_BACK + i] =
         rgb_interpolate(column[k], column[k + 1], t - k);
