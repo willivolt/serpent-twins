@@ -29,7 +29,7 @@ BLACK_RTT=$(cat /tmp/rtt.black)
 export SERPENT=$(perl -e "print ((('$WHITE_RTT' || 1e6) < ('$BLACK_RTT' || 1e6)) ? 'WHITE' : 'BLACK')")
 
 # Set the IP address of the Wiznet receiver to use.
-echo "WHITE_RTT=$WHITE_RTT, BLACK_RTT=$BLACK_RTT, SERPENT=$SERPENT"
+echo -e "WHITE_RTT=$WHITE_RTT, BLACK_RTT=$BLACK_RTT, SERPENT=$SERPENT\r\n"
 if [ "$SERPENT" == "WHITE" ]; then
   echo "$WHITE_WIZNET 60666" > /tmp/serpent
   export WHITE_SERPENT=1
@@ -39,12 +39,12 @@ else
   export BLACK_SERPENT=1
   LOCAL_IP=$BLACK_IP
 fi
-echo
-echo "Detected $SERPENT serpent, using $LOCAL_IP -> $(cat /tmp/serpent)."
-echo
+echo -e "\r\n"
+echo -e "Detected $SERPENT serpent, using $LOCAL_IP -> $(cat /tmp/serpent).\r\n"
+echo -e "\r\n"
 ifconfig usb0 up $LOCAL_IP
 ifconfig usb0
-echo
+echo -e "\r\n"
 
 # Start the serpent program in a screen session.
 cd /home/root/bin
@@ -53,4 +53,3 @@ ln -sf /dev/midi1 /tmp/midi.in
 ln -sf /dev/midi1 /tmp/midi.out
 echo -e '\x90\x10\x7f' > /tmp/midi.out
 screen -dmS serpent -c /tmp/screenrc
-
