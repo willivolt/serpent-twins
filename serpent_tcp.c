@@ -131,7 +131,7 @@ void remap_to_jormungand(int s, byte* segment, byte* jorm_segment) {
   dest = jorm_pixels + JORM_SPINE_FRONT;
   for (i = 0, left = jorm_spine_front_is_left[s];
        i < JORM_SPINE_PIXELS; i++, left = !left) {
-    t = NUM_ROWS * ((float) i)/(JORM_SPINE_PIXELS - 1);
+    t = (SEG_ROWS - 1) * ((float) i)/(JORM_SPINE_PIXELS - 1);
     k = (int) t;
     column = (left ? left_column : right_column);
     *dest = rgb_interpolate(column[k], column[k + 1], t - k);
@@ -143,7 +143,7 @@ void remap_to_jormungand(int s, byte* segment, byte* jorm_segment) {
 
   dest = jorm_pixels + JORM_RIGHT_FRONT;
   for (i = 0; i < JORM_SIDE_PIXELS; i++) {
-    t = (NUM_ROWS - 1) * (((float) i)/(JORM_SIDE_PIXELS - 1));
+    t = (SEG_ROWS - 1) * (((float) i)/(JORM_SIDE_PIXELS - 1));
     k = (int) t;
     jorm_pixels[JORM_RIGHT_FRONT + i] =
         rgb_interpolate(right_column[k], right_column[k + 1], t - k);
