@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Run an animation on the Chumby.
+# Run an animation over TCP.
 
 CC=gcc
 COPTS="-std=c99 -lm -O3"

@@ -373,7 +373,7 @@ int main(int argc, char* argv[]) {
   int time_buffer[11], ti = 0, tf = 0;
   int last_button_count = 0;
 
-  serpent_mode = getenv("JORMUNGAND") ? JORMUNGAND : JULUNGGUL;
+  serpent_mode = getenv("BLACK_SERPENT") ? JORMUNGAND : JULUNGGUL;
 
   bzero(head, HEAD_PIXELS*3);
   bzero(segments, NUM_SEGS*(SEG_PIXELS + FIN_PIXELS)*3);
@@ -428,6 +428,7 @@ int main(int argc, char* argv[]) {
         }
         break;
       case JORMUNGAND:
+        tcp_put_pixels(1, head, HEAD_PIXELS);
         for (s = 0; s < NUM_SEGS; s++) {
           remap_to_jormungand(s, segments[s], jormungand_segment);
           tcp_put_pixels(2 + s, jormungand_segment, JORM_SEG_PIXELS);
@@ -449,14 +450,14 @@ int main(int argc, char* argv[]) {
            midi_get_note(6) > 0 ? '6' : ' ',
            midi_get_note(7) > 0 ? '7' : ' ',
            midi_get_note(8) > 0 ? '8' : ' ',
-	   midi_get_control(1),
-	   midi_get_control(2),
-	   midi_get_control(3),
-	   midi_get_control(4),
-	   midi_get_control(5),
-	   midi_get_control(6),
-	   midi_get_control(7),
-	   midi_get_control(8));
+           midi_get_control(1),
+           midi_get_control(2),
+           midi_get_control(3),
+           midi_get_control(4),
+           midi_get_control(5),
+           midi_get_control(6),
+           midi_get_control(7),
+           midi_get_control(8));
     fflush(stdout);
 
     next_frame_time += 1000/FPS;
