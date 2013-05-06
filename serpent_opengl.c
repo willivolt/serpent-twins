@@ -701,6 +701,9 @@ void put_segment_pixels(int segment, unsigned char* pixels, int n) {
   }
 }
 
+void put_spine_pixels(unsigned char* pixels, int n) {
+}
+
 int main(int argc, char **argv) {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
