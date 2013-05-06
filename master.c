@@ -20,7 +20,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
+#include <unistd.h>
 #include "serpent.h"
 #include "spectrum.pal"
 #include "sunset.pal" 
@@ -30,11 +32,22 @@
 #define SEC FPS  // use this for animation time parameters
 //#define SEC 6  // use this to speed up by a factor of 10 for testing
 
+#define in_interval(val, min, count) ((val) >= (min) && (val) < (min) + (count))
+#define TAIL_FIN_START 100
+#define TAIL_FIN_COUNT 12
+#define TAIL_LANTERN_START 112
+#define TAIL_LANTERN_COUNT 22
+
+#define CRYSTAL_START 228
+#define CRYSTAL_COUNT 6
+
 float last_frame = 0;
 
 // Pixel manipulation ======================================================
 
+pixel head[HEAD_PIXELS];
 pixel pixels[NUM_PIXELS];
+pixel spine[NUM_ROWS];
 
 short __i;
 long __alpha;
@@ -43,12 +56,12 @@ long __value;
 #define paint_rgb(pixels, i, red, green, blue, alpha) { \
   __i = i; \
   __alpha = alpha; \
-  __value = (((long) red)*(__alpha) + pixels[__i].r*(256-__alpha)) >> 8; \
-  pixels[__i].r = __value < 0 ? 0 : __value > 255 ? 255 : __value; \
-  __value = (((long) green)*(__alpha) + pixels[__i].g*(256-__alpha)) >> 8; \
-  pixels[__i].g = __value < 0 ? 0 : __value > 255 ? 255 : __value; \
-  __value = (((long) blue)*(__alpha) + pixels[__i].b*(256-__alpha)) >> 8; \
-  pixels[__i].b = __value < 0 ? 0 : __value > 255 ? 255 : __value; \
+  __value = (((long) red)*(__alpha) + (pixels)[__i].r*(256-__alpha)) >> 8; \
+  (pixels)[__i].r = __value < 0 ? 0 : __value > 255 ? 255 : __value; \
+  __value = (((long) green)*(__alpha) + (pixels)[__i].g*(256-__alpha)) >> 8; \
+  (pixels)[__i].g = __value < 0 ? 0 : __value > 255 ? 255 : __value; \
+  __value = (((long) blue)*(__alpha) + (pixels)[__i].b*(256-__alpha)) >> 8; \
+  (pixels)[__i].b = __value < 0 ? 0 : __value > 255 ? 255 : __value; \
 }
 
 #define paint_pixel(pixels, i, pix, alpha) \
@@ -69,6 +82,111 @@ long __value;
 #define paint_from_palette(pixels, pixel_index, palette, f, alpha) { \
   byte* __s = (palette) + palette_index(palette, f)*3; \
   paint_rgb(pixels, pixel_index, __s[0], __s[1], __s[2], alpha); \
+}
+
+#define clamp(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
+
+/* hue = 0..254, sat = 0..255, val = 0..255 */
+void hsv_to_rgb(byte hue, byte sat, byte val, pixel* pix) {
+  byte r = 0, g = 0, b = 0, max = 0;
+  byte chr = (val*sat + 255)>>8;
+  byte min = val - chr;
+  byte phase = hue % 85;
+  byte x;
+
+  phase = (phase >= 43) ? 85 - phase : phase;
+  x = ((unsigned int) chr * phase*6 + 127) / 255;
+  switch ((hue*2)/85) {
+    case 0:
+    case 6:
+      pix->r = val;
+      pix->g = x + min;
+      pix->b = min;
+      break;
+    case 1:
+      pix->r = x + min;
+      pix->g = val;
+      pix->b = min;
+      break;
+    case 2:
+      pix->r = min;
+      pix->g = val;
+      pix->b = x + min;
+      break;
+    case 3:
+      pix->r = min;
+      pix->g = x + min;
+      pix->b = val;
+      break;
+    case 4:
+      pix->r = x + min;
+      pix->g = min;
+      pix->b = val;
+      break;
+    case 5:
+      pix->r = val;
+      pix->g = min;
+      pix->b = x + min;
+      break;
+  }
+}
+
+#define frandom(max) ((random() % 1000000) * 0.000001 * (max))
+#define irandom(max) (random() % (max))
+
+void setup_tint(float hue, float amount, float dim, pixel* p, byte* alpha) {
+  byte sat;
+
+  if (amount <= 1) {
+    sat = 255;
+    *alpha = amount*255.99;
+  } else {
+    sat = (2 - amount)*255.99;
+    *alpha = 255.99;
+  }
+  hsv_to_rgb(hue*254.99, sat, dim*255.99, p);
+}
+
+
+// Head pixels =============================================================
+
+int left_outer_eye_start;
+int right_outer_eye_start;
+int outer_eye_length;
+int left_inner_eye_start;
+int right_inner_eye_start;
+int inner_eye_length;
+int left_medallion_start;
+int right_medallion_start;
+int medallion_length;
+
+void init_head_pixel_locations() {
+  left_outer_eye_start = 182;
+  right_outer_eye_start =
+      getenv("BLACK_SERPENT") ? 182 + 22 + 13 + 12 : 182 + 22 + 13 + 12 + 6;
+  outer_eye_length = 22;
+  left_inner_eye_start = left_outer_eye_start + outer_eye_length;
+  right_inner_eye_start = right_outer_eye_start + outer_eye_length;
+  inner_eye_length = 13;
+  left_medallion_start = 0;
+  right_medallion_start =
+      right_outer_eye_start + outer_eye_length + inner_eye_length;
+  medallion_length = 28;
+}
+
+void copy_body_to_head(pixel* pixels, pixel* head) {
+  memcpy(head, pixels, sizeof(pixel)*HEAD_PIXELS);
+
+  // Give special colour separation to the eyes.
+  pixel* p = (pixel*) pixels;
+  for (int i = 0; i < outer_eye_length; i++) {
+    head[left_outer_eye_start + i] = pixels[NUM_PIXELS - 1 - i];
+    head[right_outer_eye_start + i] = pixels[NUM_PIXELS - 1 - i];
+  }
+  for (int i = 0; i < inner_eye_length; i++) {
+    head[left_outer_eye_start + outer_eye_length + i] = pixels[i];
+    head[right_outer_eye_start + outer_eye_length + i] = pixels[i];
+  }
 }
 
 
@@ -97,10 +215,11 @@ void init_tables() {
 // Pattern state and transitions ===========================================
 
 struct pattern;
-typedef byte next_frame_func(struct pattern* p, pixel* pixels);
+typedef byte next_frame_func(struct pattern* p, pixel* pixels, pixel* head);
 struct pattern {
   char* name;
   next_frame_func* next_frame;
+  byte time_warp_capable;
   float frame;
 };
 typedef struct pattern pattern;
@@ -112,6 +231,7 @@ short transition_alpha(
   if (!auto_advance) {
     duration = 60*60*SEC;
   }
+  // Set next_pattern_override_start to immediately begin a 3-second fade-out.
   if (next_pattern_override_start > 0) {
     frame = frame - next_pattern_override_start + in_period + duration;
     out_period = 3*SEC;
@@ -135,7 +255,7 @@ short transition_alpha(
 
 // Null pattern ============================================================
 
-byte null_next_frame(pattern* p, pixel* pixels) {
+byte null_next_frame(pattern* p, pixel* pixels, pixel* head) {
   return 0;
 }
 
@@ -155,7 +275,7 @@ void base_select_target(pixel* target_pixels) {
   }
 }
 
-byte base_next_frame(pattern* p, pixel* pixels) {
+byte base_next_frame(pattern* p, pixel* pixels, pixel* head) {
   static pixel source_pixels[NUM_PIXELS];
   static pixel target_pixels[NUM_PIXELS];
   static long in_period = 0;
@@ -188,7 +308,7 @@ byte base_next_frame(pattern* p, pixel* pixels) {
 
 #define SWIRL_DUTY_CYCLE_ON 120
 #define SWIRL_DUTY_CYCLE_OFF 120
-#define SWIRL_IMPULSE_START (30*SEC)
+#define SWIRL_IMPULSE_START (15*SEC)
 
 #define SWIRL_TICKS_PER_FRAME 10 
 #define SWIRL_SPRING_CONST 400  // kg/s^2
@@ -241,14 +361,9 @@ void swirl_tick(float dt) {
   }
 }
 
-byte swirl_next_frame(pattern* p, pixel* pixels) {
+byte swirl_next_frame(pattern* p, pixel* pixels, pixel* head) {
   int x = p->frame;
-  short alpha = get_alpha_or_terminate(x, 5*SEC, 2*60*SEC, 10*SEC);
-
-  static int left_outer_eye_start = 182;
-  static int right_outer_eye_start = 182 + 22 + 13 + 12 + 6;
-  static int outer_eye_length = 22;
-  static int inner_eye_length = 13;
+  short alpha = get_alpha_or_terminate(x, 3*SEC, 2*60*SEC, 3*SEC);
 
   if (x == 0) {
     midi_set_control_with_pickup(7, 40);
@@ -287,9 +402,11 @@ byte swirl_next_frame(pattern* p, pixel* pixels) {
     }
     swirl_restore_center = sum / NUM_ROWS;
   }
-  
+
   if (p->frame != last_frame) {
-    for (int t = 0; t < SWIRL_TICKS_PER_FRAME; t++) {
+    int count = SWIRL_TICKS_PER_FRAME*(p->frame - last_frame);
+    if (count < 1) { count = 1; }
+    for (int t = 0; t < count; t++) {
       swirl_tick(1.0/FPS/SWIRL_TICKS_PER_FRAME);
     }
     last_frame = p->frame;
@@ -303,6 +420,7 @@ byte swirl_next_frame(pattern* p, pixel* pixels) {
     }
   }
 
+  copy_body_to_head(pixels, head);
   return 1;
 }
 
@@ -311,9 +429,9 @@ byte swirl_next_frame(pattern* p, pixel* pixels) {
 
 #define RABBIT_MAX_BRIGHT 255
 
-byte rabbit_sine_next_frame(pattern* p, pixel* pixels) {
+byte rabbit_sine_next_frame(pattern* p, pixel* pixels, pixel* head) {
     float frame = p->frame;
-    short alpha = get_alpha_or_terminate(frame, 5*SEC, 2*60*SEC, 10*SEC);
+    short alpha = get_alpha_or_terminate(frame, 3*SEC, 2*60*SEC, 3*SEC);
 
     int r,g,b,temp;
 
@@ -445,6 +563,7 @@ byte rabbit_sine_next_frame(pattern* p, pixel* pixels) {
         paint_rgb(pixels, i, r, g, b, alpha);
     }
 
+    copy_body_to_head(pixels, head);
     return 1;
 }
 
@@ -463,7 +582,7 @@ void electric_draw_locus(int x, int orientation, byte* pixels) {
   }
 }
 
-byte electric_next_frame(pattern* p, pixel* pixels) {
+byte electric_next_frame(pattern* p, pixel* pixels, pixel* head) {
   static int inv_velocity[ELECTRIC_LOCI];
   static int inv_omega[ELECTRIC_LOCI];
   static int t_not[ELECTRIC_LOCI];
@@ -474,7 +593,7 @@ byte electric_next_frame(pattern* p, pixel* pixels) {
   int posx;
   int orientation;
 
-  short alpha = get_alpha_or_terminate(p->frame, 2*SEC, 2*60*SEC, 10*SEC);
+  short alpha = get_alpha_or_terminate(p->frame, 3*SEC, 2*60*SEC, 3*SEC);
   int frame = p->frame - 4*SEC;
 
   for(i=0;i<9000;i++) {
@@ -512,6 +631,7 @@ byte electric_next_frame(pattern* p, pixel* pixels) {
     paint_rgb(pixels, i, r, g, b, alpha); 
   }
 
+  copy_body_to_head(pixels, head);
   return 1;
 }
 
@@ -523,7 +643,7 @@ byte electric_next_frame(pattern* p, pixel* pixels) {
 #define SQUARES_MAX_H 24      // max height (length of serpent) of a squares_sprite
 #define SQUARES_MAX_Z 100     // max # of Z-levels (could improve this by making sure no two squares_sprites are on the same Z-level)
 #define SQUARES_MAX_DX 2.0      // max X-axis movement in pix/frame
-#define SQUARES_MAX_DY 7.5      // max Y-axis movement in pix/frame
+#define SQUARES_MAX_DY 6.0      // max Y-axis movement in pix/frame
 #define SQUARES_MAX_BG_BLINK 160  // max # of frames between flashes
 
 typedef struct {
@@ -539,20 +659,20 @@ typedef struct {
 
 void squares_init_sprites(void);
 squares_sprite* squares_top_sprite(int x, int y);
-void squares_move_sprites(void);
+void squares_move_sprites(float df);
 
 squares_sprite squares_sprites[SQUARES_NUM_SPRITES];
 squares_color squares_bg;
 int squares_blinktimer;
 
-byte squares_next_frame(pattern* p, pixel* pixels) {
-  short alpha = get_alpha_or_terminate(p->frame, 5*SEC, 2*60*SEC, 10*SEC);
+byte squares_next_frame(pattern* p, pixel* pixels, pixel* head) {
+  short alpha = get_alpha_or_terminate(p->frame, 3*SEC, 2*60*SEC, 3*SEC);
   int frame = p->frame;
 
-  if (frame == 0) {
+  if (frame == 0 || midi_get_control(14)) {
     squares_init_sprites();
   }
-  
+
   switch(squares_blinktimer) {
     case 5:
       squares_bg.r = squares_bg.g = squares_bg.b = 128;
@@ -576,7 +696,7 @@ byte squares_next_frame(pattern* p, pixel* pixels) {
       squares_bg.r = squares_bg.g = squares_bg.b = 0;
       break;
   }
-  if (frame != last_frame) {
+  if (p->frame != last_frame) {
     squares_blinktimer--;
   }
       
@@ -596,11 +716,12 @@ byte squares_next_frame(pattern* p, pixel* pixels) {
     }
   }
 
-  if (frame != last_frame) {
-    squares_move_sprites();
+  if (p->frame != last_frame) {
+    squares_move_sprites(p->frame - last_frame);
   }
-  last_frame = frame;
+  last_frame = p->frame;
 
+  copy_body_to_head(pixels, head);
   return 1;
 }
 
@@ -641,27 +762,49 @@ squares_sprite* squares_top_sprite(int x, int y) {
   return current;
 }
 
-void squares_move_sprites(void) {
+void squares_move_sprites(float df) {
   for(int i=0;i<SQUARES_NUM_SPRITES;i++) {
     squares_sprite* s = &squares_sprites[i];
-    if ( s->x < 0 || s->x > NUM_COLUMNS ) {
-      s->dx *= -1;
+    s->x += s->dx*df;
+    s->y += s->dy*df;
+    if (s->x < 0) {
+      s->x = -s->x;
+      s->dx = -s->dx;
     }
-    s->x += s->dx;
-
-    if ( s->y < 0 || s->y > NUM_ROWS ) {
-      s->dy *= -1;
+    if (s->x > NUM_COLUMNS - s->w) {
+      s->x = (NUM_COLUMNS - s->w) - (s->x - (NUM_COLUMNS - s->w));
+      s->dx = -s->dx;
     }
-    s->y += s->dy;
+    if (s->y < 0) {
+      s->y = -s->y;
+      s->dy = -s->dy;
+    }
+    if (s->y > NUM_ROWS - s->h) {
+      s->y = (NUM_ROWS - s->h) - (s->y - (NUM_ROWS - s->h));
+      s->dy = -s->dy;
+    }
   }
 }
 
 
 // "plasma", by Ka-Ping Yee ================================================
 
-byte plasma_next_frame(pattern* p, pixel* pixels) {
-  short alpha = get_alpha_or_terminate(p->frame, 5*SEC, 2*60*SEC, 10*SEC);
-  float f = p->frame * 0.1;
+byte plasma_next_frame(pattern* p, pixel* pixels, pixel* head) {
+  short alpha = get_alpha_or_terminate(p->frame, 3*SEC, 2*60*SEC, 3*SEC);
+  float f = p->frame * 0.4;
+  float filter = 1.0;
+  float target_altitude = -100;
+  float spread = 1;
+
+  if (p->frame == 0) {
+    midi_set_control_with_pickup(7, 64);
+    midi_set_control_with_pickup(8, 0);
+  }
+
+  if (midi_get_control(8) > 0) {
+    spread = midi_get_control_exp(7, 0.1, 1.6);
+    target_altitude = midi_get_control_linear(8, -3, 3);
+  }
 
   for (int r = 0; r < NUM_ROWS; r++) {
     for (int c = 0; c < NUM_COLUMNS; c++) {
@@ -670,12 +813,18 @@ byte plasma_next_frame(pattern* p, pixel* pixels) {
           SIN((SIN(r*4)*40 + c*1.2 + f)*4.7) +
           SIN((c - r*0.4 - f*0.7)*2.1) *
           SIN((SIN(c*3.4 + r*0.3)*20 - f*2)*5.1);
+      if (target_altitude > -100) {
+        filter = 1 - fabs(altitude - target_altitude)/spread;
+        if (filter < 0) filter = 0;
+        paint_rgb(pixels, pixel_index(r, c), 0, 0, 0, alpha);
+      }
       paint_from_palette(
           pixels, pixel_index(r, c), SPECTRUM_PALETTE,
-          0.5 + altitude*0.3, alpha);
+          0.5 + altitude*0.3, alpha*filter);
     }
   }
 
+  copy_body_to_head(pixels, head);
   return 1;
 }
 
@@ -684,7 +833,7 @@ byte plasma_next_frame(pattern* p, pixel* pixels) {
 
 #define RIPPLES 10
 
-byte ripple_next_frame(pattern* p, pixel* pixels) {
+byte ripple_next_frame(pattern* p, pixel* pixels, pixel* head) {
   static int posx[RIPPLES];
   static int posy[RIPPLES];
   static int radius[RIPPLES];
@@ -701,8 +850,8 @@ byte ripple_next_frame(pattern* p, pixel* pixels) {
   int rmax;
   int pixnum;
 
-  short alpha = get_alpha_or_terminate(p->frame, 5*SEC, 2*60*SEC, 10*SEC);
-  int frame = p->frame - 10*SEC;
+  short alpha = get_alpha_or_terminate(p->frame, 3*SEC, 2*60*SEC, 3*SEC);
+  int frame = p->frame - 3*SEC;
 
   for(i=0;i<9000;i++) {
     temp_pixels[i]=0;
@@ -790,6 +939,7 @@ byte ripple_next_frame(pattern* p, pixel* pixels) {
 
   last_frame = frame;
 
+  copy_body_to_head(pixels, head);
   return 1;
 }
 
@@ -806,9 +956,9 @@ float min(float a, float b) {
     return b;
 }
 
-byte rabbit_rainbow_twist_next_frame(pattern* p, pixel* pixels) {
+byte rabbit_rainbow_twist_next_frame(pattern* p, pixel* pixels, pixel* head) {
     float frame = p->frame;
-    short alpha = get_alpha_or_terminate(frame, 10*SEC, 3*60*SEC, 10*SEC);
+    short alpha = get_alpha_or_terminate(frame, 3*SEC, 3*60*SEC, 3*SEC);
 
     // coordinates
     int x,y;         // x is around, y is along
@@ -956,6 +1106,7 @@ byte rabbit_rainbow_twist_next_frame(pattern* p, pixel* pixels) {
         paint_rgb(pixels, i, r, g, b, alpha);
     }
 
+    copy_body_to_head(pixels, head);
     return 1;
 }
 
@@ -1011,8 +1162,8 @@ unsigned char pond_env_map[2400];
 #define POND_ENV_MAP pond_env_map
 typedef unsigned short word;
 
-byte pond_next_frame(pattern* p, pixel* pixels) {
-  short alpha = get_alpha_or_terminate(p->frame, 10*SEC, 2*60*SEC, 10*SEC);
+byte pond_next_frame(pattern* p, pixel* pixels, pixel* head) {
+  short alpha = get_alpha_or_terminate(p->frame, 3*SEC, 2*60*SEC, 3*SEC);
   int f = p->frame;
 
   float t = POND_TIME_SPEEDUP * (float) f / FPS;
@@ -1091,25 +1242,475 @@ byte pond_next_frame(pattern* p, pixel* pixels) {
 
   last_frame = p->frame;
 
+  copy_body_to_head(pixels, head);
   return 1;
 }
 
+
+// "twinkle", by Ka-Ping Yee ================================================
+
+#define TWINKLE_MAX_STARS 10000
+int twinkle_num_stars = 0;
+float twinkle_last_frame = 0;
+typedef struct {
+  int index;
+  pixel color;
+  byte value;
+  float magnitude;
+  float target;
+  float ttl;
+} twinkle_star;
+twinkle_star twinkle_stars[TWINKLE_MAX_STARS];
+
+#define TWINKLE_MAX_METEORITES 100
+int twinkle_num_meteorites = 0;
+typedef struct {
+  int c;
+  int size;
+  float r, v;
+  float levels[NUM_ROWS];
+} twinkle_meteorite;
+twinkle_meteorite twinkle_meteorites[TWINKLE_MAX_METEORITES];
+
+void twinkle_add_meteorite() {
+  twinkle_meteorite* meteorite;
+  if (twinkle_num_meteorites < TWINKLE_MAX_METEORITES) {
+    meteorite = &twinkle_meteorites[twinkle_num_meteorites++];
+    meteorite->c = irandom(NUM_COLUMNS);
+    meteorite->r = frandom(NUM_ROWS) - 10;
+    meteorite->v = frandom(NUM_ROWS) + 20;
+    meteorite->size = 3000*pow(10, frandom(1));
+    bzero(meteorite->levels, sizeof(int)*NUM_ROWS);
+  }
+}
+
+int twinkle_advance_meteorite(twinkle_meteorite* meteorite, float dt) {
+  int r, dr, keep;
+  float fade = pow(0.003, dt);
+
+  for (r = 0; r < NUM_ROWS; r++) {
+    meteorite->levels[r] *= fade;
+  }
+  keep = 0;
+  for (r = 0; r < NUM_ROWS; r++) {
+    dr = r - meteorite->r;
+    meteorite->levels[r] += dt*meteorite->size*0.1/(0.1 + dr*dr);
+    if (meteorite->levels[r] > 0.5) keep = 1;
+  }
+  meteorite->r += meteorite->v*dt;
+  meteorite->size *= fade;
+  return keep;
+}
+
+void twinkle_add_star() {
+  twinkle_star* star;
+  if (twinkle_num_stars < TWINKLE_MAX_STARS) {
+    star = &twinkle_stars[twinkle_num_stars++];
+    if (twinkle_num_stars <= 2) {
+      star->index = SEG_PIXELS*9 + TAIL_LANTERN_START +
+                    (random() % TAIL_LANTERN_COUNT);
+      star->value = 100 + 100 / (1.0 + frandom(30)*frandom(30));
+    } else if (twinkle_num_stars <= 4) {
+      star->index = CRYSTAL_START + (random() % CRYSTAL_COUNT);
+      star->value = 100 + 100 / (1.0 + frandom(30)*frandom(30));
+    } else {
+      star->index = random() % NUM_PIXELS;
+      star->value = 1 + 200 / (1.0 + frandom(30)*frandom(30));
+    }
+    star->magnitude = 1;
+    hsv_to_rgb(irandom(254), irandom(32), 255, &star->color);
+  }
+}
+
+byte twinkle_next_frame(pattern* p, pixel* pixels, pixel* head) {
+  short alpha = get_alpha_or_terminate(p->frame, 3*SEC, 5*60*SEC, 3*SEC);
+  twinkle_star* star;
+  twinkle_meteorite* meteorite;
+  float meteorites_per_second = midi_get_control_exp(7, 0.004, 60);
+  int stars_wanted = midi_get_control_exp(8, 8, TWINKLE_MAX_STARS);
+  float twinkle_amplitude = midi_get_control_exp(23, 0.1, 1);
+  float twinkle_time = midi_get_control_exp(24, 1, 0.01);
+  float dt = (p->frame - twinkle_last_frame)/FPS;
+  pixel canvas[NUM_PIXELS];
+  int i, j, level;
+  pixel* pix;
+
+  if (p->frame == 0) {
+    midi_set_control_with_pickup(6, 32);  // turn off fins
+    midi_set_control_with_pickup(7, 40);
+    midi_set_control_with_pickup(8, 80);
+    midi_set_control_with_pickup(23, 80);
+    midi_set_control_with_pickup(24, 40);
+  }
+
+  while (twinkle_num_stars < stars_wanted) {
+    twinkle_add_star();
+  }
+  twinkle_num_stars = stars_wanted;
+
+  float fade = pow(0.5, dt/twinkle_time);
+  for (i = 0; i < twinkle_num_stars; i++) {
+    star = &twinkle_stars[i];
+    star->ttl -= dt;
+    if (star->ttl <= 0) {
+      star->target = 1 - frandom(twinkle_amplitude);
+      star->ttl = twinkle_time*(1 - frandom(0.5));
+    }
+    star->magnitude = star->magnitude*fade + star->target*(1 - fade);
+  }
+
+  if (frandom(1) < meteorites_per_second*dt) {
+    twinkle_add_meteorite();
+  }
+  j = 0;
+  for (i = 0; i < twinkle_num_meteorites; i++) {
+    twinkle_advance_meteorite(&twinkle_meteorites[i], dt/2);
+    if (twinkle_advance_meteorite(&twinkle_meteorites[i], dt/2)) {
+      twinkle_meteorites[j++] = twinkle_meteorites[i];
+    }
+  }
+  twinkle_num_meteorites = j;
+
+  bzero(canvas, sizeof(pixel)*NUM_PIXELS);
+  for (i = 0; i < twinkle_num_stars; i++) {
+    star = &twinkle_stars[i];
+    level = star->value < 10 ? star->value : pow(star->value, star->magnitude);
+    paint_rgb(canvas, star->index,
+              star->color.r, star->color.g, star->color.b, level);
+  }
+  for (i = 0; i < twinkle_num_meteorites; i++) {
+    meteorite = &twinkle_meteorites[i];
+    for (j = 0; j < NUM_ROWS; j++) {
+      level = clamp(meteorite->levels[j], 0, 256);
+      paint_rgb(canvas, pixel_index(j, meteorite->c), 255, 255, 255, level);
+    }
+  }
+  for (i = 0, pix = canvas; i < NUM_PIXELS; i++, pix++) {
+    paint_rgb(pixels, i, pix->r, pix->g, pix->b, alpha);
+  }
+
+  twinkle_last_frame = p->frame;
+
+  copy_body_to_head(pixels, head);
+
+  pixel gold;
+  hsv_to_rgb(12, 255, 60, &gold);
+  for (i = 0; i < HEAD_PIXELS; i++) {
+    if (in_interval(i, left_outer_eye_start, outer_eye_length) ||
+        in_interval(i, right_outer_eye_start, outer_eye_length) ||
+        in_interval(i, left_medallion_start, medallion_length) ||
+        in_interval(i, right_medallion_start, medallion_length)) {
+      paint_rgb(head, i, gold.r, gold.g, gold.b, alpha);
+    }
+  }
+
+  return 1;
+}
+
+
+// "fire", by Ka-Ping Yee ================================================
+
+#define FIRE_NUM_PIXELS NUM_ROWS
+int fire_levels[FIRE_NUM_PIXELS];
+int fire_next_levels[FIRE_NUM_PIXELS];
+
+void fire_blur(int count, int* levels, int* next_levels) {
+  int i, j, k;
+
+  for (i = 0; i < count; i++) {
+    j = (i + 1) % count;
+    k = (i + count - 1) % count;
+    next_levels[i] = (levels[i]*6 + levels[j] + levels[k])/8;
+  }
+  memcpy(levels, next_levels, sizeof(int)*count);
+}
+
+void fire_pop(int count, int* levels, float volume, int intensity, int limit) {
+  int i, excess, delta;
+
+  while (volume >= 1.0) {
+    levels[rand() % count] += intensity;
+    volume = volume - 1.0;
+  }
+  if (rand() % 1000 < volume * 1000) {
+    levels[rand() % count] += intensity;
+  }
+
+  excess = 0;
+  for (i = 0; i < count; i++) {
+    excess += levels[i];
+  }
+  excess = (excess > limit) ? excess - limit : 0;
+  if (rand() % 2) {
+    for (i = 0; i < count; i++) {
+      delta = excess/(count - i);
+      delta = (delta > levels[i]) ? levels[i] : delta;
+      levels[i] -= delta;
+      excess -= delta;
+    }
+  } else {
+    for (i = count - 1; i >= 0; i--) {
+      delta = excess/(i + 1);
+      delta = (delta > levels[i]) ? levels[i] : delta;
+      levels[i] -= delta;
+      excess -= delta;
+    }
+  }
+}
+
+void fire_setup(int count, int* levels) {
+  int i;
+
+  for (i = 0; i < count; i++) {
+    levels[i] = rand() % 100;
+  }
+}
+
+void fire_set_pixels(int count, int* levels,
+                      pixel c0, pixel c1, pixel c2, pixel c3, pixel* pixels) {
+  int i, l, s;
+
+  bzero(pixels, count*sizeof(pixel));
+  for (i = 0; i < count; i++) {
+    l = levels[i];
+    s = c0.r + c1.r * clamp(l, 0, 256)/256 +
+               c2.r * clamp(l - 256, 0, 256)/256 +
+               c3.r * clamp(l - 512, 0, 256)/256;
+    pixels[i].r = clamp(s, 0, 255);
+    s = c0.g + c1.g * clamp(l, 0, 256)/256 +
+               c2.g * clamp(l - 256, 0, 256)/256 +
+               c3.g * clamp(l - 512, 0, 256)/256;
+    pixels[i].g = clamp(s, 0, 255);
+    s = c0.b + c1.b * clamp(l, 0, 256)/256 +
+               c2.b * clamp(l - 256, 0, 256)/256 +
+               c3.b * clamp(l - 512, 0, 256)/256;
+    pixels[i].b = clamp(s, 0, 255);
+  }
+}
+
+byte fire_next_frame(pattern* p, pixel* pixels, pixel* head) {
+  static pixel fire_pixels[FIRE_NUM_PIXELS];
+  short alpha = get_alpha_or_terminate(p->frame, 3*SEC, 5*60*SEC, 3*SEC);
+  pixel* pix;
+  int i, r, c;
+  static int last_dim = 0;
+  pixel c0 = {20, 0, 0};
+  pixel c1 = {200, 20, 0};
+  pixel c2 = {40, 140, 0};
+  pixel c3 = {60, 60, 60};
+
+  if (p->frame == 0) {
+    midi_set_control_with_pickup(25, last_dim = midi_get_control(1));
+
+    fire_setup(FIRE_NUM_PIXELS, fire_levels);
+    midi_set_control_with_pickup(6, 96);
+
+    midi_set_control_with_pickup(7, 0x3c);
+    midi_set_control_with_pickup(8, 0x34);
+
+    midi_set_control_with_pickup(26, 0); // c0 hue/2
+    midi_set_control_with_pickup(30, 10); // c0 value/2
+    midi_set_control_with_pickup(27, 2); // c1 hue/2
+    midi_set_control_with_pickup(31, 100); // c1 value/2
+    midi_set_control_with_pickup(28, 36); // c2 hue/2
+    midi_set_control_with_pickup(32, 70); // c2 value/2
+  }
+
+  if (midi_get_control(1) != last_dim) {
+    midi_set_control_with_pickup(25, last_dim = midi_get_control(1));
+  }
+
+  // Link overall dim to controller 25 (same knob in preset 2).
+  midi_set_control_with_pickup(1, last_dim = midi_get_control(25));
+
+  hsv_to_rgb(midi_get_control(26)*2, 255, midi_get_control(30)*2, &c0);
+  hsv_to_rgb(midi_get_control(27)*2, 255, midi_get_control(31)*2, &c1);
+  hsv_to_rgb(midi_get_control(28)*2, 255, midi_get_control(32)*2, &c2);
+  if (midi_get_control(13) > 0) {
+    printf("26=%02x, 27=%02x, 28=%02x\n",
+           midi_get_control(26), midi_get_control(27), midi_get_control(28));
+    printf("30=%02x, 31=%02x, 32=%02x\n",
+           midi_get_control(30), midi_get_control(31), midi_get_control(32));
+  }
+
+  fire_blur(FIRE_NUM_PIXELS, fire_levels, fire_next_levels);
+  fire_pop(FIRE_NUM_PIXELS, fire_levels, midi_get_control_exp(8, 4, 400),
+           midi_get_control_exp(7, 7, 700), 200*FIRE_NUM_PIXELS);
+  fire_set_pixels(FIRE_NUM_PIXELS, fire_levels, c0, c1, c2, c3, fire_pixels);
+  for (r = 0; r < NUM_ROWS; r++) {
+    pix = &fire_pixels[r];
+    for (c = 0; c < NUM_COLUMNS; c++) {
+      paint_rgb(pixels, pixel_index(r, c), pix->r, pix->g, pix->b, alpha);
+    }
+  }
+
+  copy_body_to_head(pixels, head);
+
+  pixel black = {0, 0, 0};
+  pixel gold;
+  hsv_to_rgb(7, 255, 32, &gold);
+  for (i = TAIL_LANTERN_START; i < TAIL_LANTERN_COUNT; i++) {
+    pixels[SEG_PIXELS*9 + i] = black;
+    paint_rgb(pixels + SEG_PIXELS*9, i, gold.r, gold.g, gold.b, alpha);
+  }
+
+  return 1;
+}
+
+
+// "diner", by Ka-Ping Yee =================================================
+
+typedef struct {
+  byte head, outer_eye, inner_eye, medallion, body1, body2, lantern; 
+} tint_scheme;
+
+#define NUM_TINT_SCHEMES 16
+tint_scheme tint_schemes[16] = {
+  {0, 0, 1, 2, 1, 0, 2},
+  {0, 0, 1, 2, 1, 0, 0},
+  {0, 0, 1, 2, 1, 2, 2},
+  {0, 0, 1, 2, 1, 2, 0},
+  {0, 2, 1, 2, 1, 0, 2},
+  {0, 2, 1, 2, 1, 0, 0},
+  {0, 2, 1, 2, 1, 2, 2},
+  {0, 2, 1, 2, 1, 2, 0},
+  {0, 0, 1, 1, 1, 0, 2},
+  {0, 0, 1, 1, 1, 0, 0},
+  {0, 0, 1, 1, 1, 2, 2},
+  {0, 0, 1, 1, 1, 2, 0},
+  {0, 2, 1, 1, 1, 0, 2},
+  {0, 2, 1, 1, 1, 0, 0},
+  {0, 2, 1, 1, 1, 2, 2},
+  {0, 2, 1, 1, 1, 2, 0},
+};
+
+byte diner_next_frame(pattern* p, pixel* pixels, pixel* head) {
+  int i, t;
+  short alpha = get_alpha_or_terminate(p->frame, 3*SEC, 5*60*SEC, 3*SEC);
+  static int last_dim = 0;
+
+  if (p->frame == 0) {
+    midi_set_control_with_pickup(17, last_dim = midi_get_control(1));
+    midi_set_control_with_pickup(21, 0);
+
+    // neon blue
+    midi_set_control_with_pickup(18, 0x47);
+    midi_set_control_with_pickup(22, 0x20);
+
+    // neon pink
+    midi_set_control_with_pickup(19, 0x6f);
+    midi_set_control_with_pickup(23, 0x43);
+
+    // neon gold
+    midi_set_control_with_pickup(20, 0x07);
+    midi_set_control_with_pickup(24, 0x40);
+  }
+
+  if (midi_get_control(1) != last_dim) {
+    midi_set_control_with_pickup(17, last_dim = midi_get_control(1));
+  }
+
+  // Link overall dim to controller 17 (same knob in preset 2).
+  midi_set_control_with_pickup(1, last_dim = midi_get_control(17));
+
+  pixel tint[3];
+  byte tint_alpha[3];
+  int scheme = midi_get_control(21)*NUM_TINT_SCHEMES/128;
+  printf("tint");
+  for (i = 0; i < 3; i++) {
+    printf(" - %d: %02x %02x", i,
+           midi_get_control(18 + i), midi_get_control(22 + i));
+    setup_tint(midi_get_control_linear(18 + i, 0, 1.1),
+               midi_get_control_linear(22 + i, 0, 2), 1.0,
+               &tint[i], &tint_alpha[i]);
+  }
+  printf("   scheme %d\n", scheme);
+
+  tint_scheme s = tint_schemes[scheme];
+    
+  bzero(head, sizeof(pixel)*HEAD_PIXELS);
+  for (i = 0; i < HEAD_PIXELS; i++) {
+    t = s.head;
+    if (in_interval(i, left_outer_eye_start, outer_eye_length) ||
+        in_interval(i, right_outer_eye_start, outer_eye_length)) {
+      t = s.outer_eye;
+    }
+    if (in_interval(i, left_inner_eye_start, inner_eye_length) ||
+        in_interval(i, right_inner_eye_start, inner_eye_length)) {
+      t = s.inner_eye;
+    }
+    if (in_interval(i, left_medallion_start, medallion_length) ||
+        in_interval(i, right_medallion_start, medallion_length)) {
+      t = s.medallion;
+    }
+    paint_rgb(head, i, tint[t].r, tint[t].g, tint[t].b,
+              tint_alpha[t]*alpha/255);
+  }
+
+  bzero(pixels, sizeof(pixel)*NUM_PIXELS);
+  for (i = 0; i < NUM_PIXELS; i++) {
+    t = ((i / SEG_PIXELS) % 2) ? s.body2 : s.body1;
+    if (in_interval(i, SEG_PIXELS*9 + TAIL_LANTERN_START, TAIL_LANTERN_COUNT)) {
+      t = s.lantern;
+    }
+    paint_rgb(pixels, i, tint[t].r, tint[t].g, tint[t].b,
+              tint_alpha[t]*alpha/255);
+  }
+
+  return 1;
+}
 
 // Pattern table ===========================================================
 
 pattern BASE_PATTERN = {"base", base_next_frame, 0};
 
-#define NUM_PATTERNS 8
+#define NUM_PATTERNS 12
 pattern PATTERNS[] = {
-  {"pond", pond_next_frame, 0},
-  {"rabbit-sine", rabbit_sine_next_frame, 0},
-  {"rabbit-rainbow-twist", rabbit_rainbow_twist_next_frame, 0},
-  {"plasma", plasma_next_frame, 0},
-  {"electric", electric_next_frame, 0},
-  {"ripple", ripple_next_frame, 0},
-  {"squares", squares_next_frame, 0},
-  {"swirl", swirl_next_frame, 0},
+  {"pond", pond_next_frame, 0, 0},
+  {"rabbit-sine", rabbit_sine_next_frame, 1, 0},
+  {"rabbit-rainbow-twist", rabbit_rainbow_twist_next_frame, 1, 0},
+  {"plasma", plasma_next_frame, 1, 0},
+  {"electric", electric_next_frame, 0, 0},
+  {"ripple", ripple_next_frame, 0, 0},
+  {"squares", squares_next_frame, 1, 0},
+  {"swirl", swirl_next_frame, 1, 0},
+  {"twinkle", twinkle_next_frame, 0, 0},
+  {"fire", fire_next_frame, 0, 0},
+  {"diner", diner_next_frame, 0, 0},
+  {"diner", diner_next_frame, 0, 0},
 };
+
+
+// MIDI feedback ===========================================================
+
+int midi_pattern_selected() {
+  int i, pattern = -1;
+
+  if (midi_clicks_finished()) {
+    // Click a single button to select patterns 1 through 8.
+    for (i = 0; i < 8; i++) {
+      if (midi_get_click(i + 1)) {
+        pattern = i;
+      }
+    }
+    // Chord two buttons to select patterns 9 through 12.
+    for (i = 0; i < 4; i++) {
+      if (midi_get_click(i + 1) && midi_get_click(i + 5)) {
+        pattern = i + 8;
+      }
+    }
+    midi_clear_clicks();
+  }
+  return pattern;
+}
+
+void midi_show_pattern(int pattern) {
+  int i;
+  for (i = 0; i < 8; i++) {
+    midi_set_note(i + 1, (i == pattern || i == pattern - 8 ||
+                          pattern >= 8 && i == pattern - 4) ? 127 : 0);
+  }
+}
 
 
 // Master routine ==========================================================
@@ -1125,37 +1726,46 @@ void activate_pattern(pattern* p) {
 
 void next_frame(int frame) {
   static long time_to_next_pattern = 5*SEC;
-  static int left_outer_eye_start = 182;
-  static int right_outer_eye_start = 182 + 22 + 13 + 12 + 6;
-  static int outer_eye_length = 22;
-  static int inner_eye_length = 13;
+  static int current_pattern = -1;
+  static int requested_pattern = 0;
   static int next_pattern = 0;
   static int red_thing = -10;
   static float pulses[5] = {0, 0, 0, 0, 0};
   static int pulse_mode = 0;
+  int i, r, c;
 
   if (frame == 0) {
     init_tables();
-    midi_set_control_with_pickup(1, 32);
+    init_head_pixel_locations();
+    midi_set_control_with_pickup(1, 56);
     midi_set_control_with_pickup(2, 0);
     midi_set_control_with_pickup(3, 0);
     midi_set_control_with_pickup(4, 64);
     midi_set_control_with_pickup(5, 64);
+    midi_set_control_with_pickup(17, 0);
+    midi_set_control_with_pickup(18, 0);
+    midi_set_control_with_pickup(19, 0);
+    midi_set_control_with_pickup(20, 0);
+    midi_set_control_with_pickup(21, 0);
+    midi_set_control_with_pickup(22, 0);
+    midi_set_control_with_pickup(23, 0);
+    midi_set_control_with_pickup(24, 0);
+    requested_pattern = next_pattern = getenv("BLACK_SERPENT") ? 9 : 10;
   }
 
-  if (frame % 100 == 0) {
-    midi_set_note(16, 127);
-  }
-  if (frame % 100 == 1) {
-    midi_set_note(16, 0);
-  }
-
-  base_next_frame(&BASE_PATTERN, pixels);
-  BASE_PATTERN.frame += 1;
+  bzero(pixels, sizeof(pixel)*NUM_PIXELS);
+  bzero(head, sizeof(pixel)*HEAD_PIXELS);
 
   if (curp) {
-    if (curp->next_frame(curp, pixels)) {
+    if (curp->next_frame(curp, pixels, head)) {
       float frame_rate = exp((midi_get_control(5) - 64)/32.0);
+      if (midi_get_control(13) > 0) {
+        if (curp->time_warp_capable) {
+          frame_rate *= 0.125;
+        } else {
+          frame_rate = 0;
+        }
+      }
       if (midi_get_control(5) > 0) {
         curp->frame += frame_rate;
       }
@@ -1165,13 +1775,29 @@ void next_frame(int frame) {
     }
   } else {
     if (time_to_next_pattern) {
+      midi_show_pattern(-1);
       time_to_next_pattern--;
     } else {
       activate_pattern(PATTERNS + next_pattern);
+      current_pattern = next_pattern;
       time_to_next_pattern = 5*SEC + (random() % (10*SEC));
       next_pattern = (next_pattern + 1) % NUM_PATTERNS;
           /*(next_pattern + (random() % (NUM_PATTERNS - 1))) % NUM_PATTERNS;*/
     }
+  }
+  switch ((frame/2) % 8) {
+    case 1:
+      midi_show_pattern(requested_pattern); break;
+    case 0:
+    case 2:
+      midi_show_pattern(requested_pattern == current_pattern ?
+                        current_pattern : -1); break;
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+      midi_show_pattern(current_pattern); break;
   }
 
   // External pulse source
@@ -1198,23 +1824,30 @@ void next_frame(int frame) {
     }
   }
 
-  if (midi_get_control(14)) { pulse_mode = 0; printf("\npulse_mode 0\n"); }
-  if (midi_get_control(15)) { pulse_mode = 1; printf("\npulse_mode 1\n"); }
-  if (midi_get_control(16)) { pulse_mode = 2; printf("\npulse_mode 2\n"); }
+  if (midi_get_control(13)) { pulse_mode = 0; printf("\npulse_mode 0\n"); }
+  if (midi_get_control(14)) { pulse_mode = 1; printf("\npulse_mode 1\n"); }
+  if (midi_get_control(15)) { pulse_mode = 2; printf("\npulse_mode 2\n"); }
 
   for (int i = 0; i < 5; i++) {
-    if (midi_get_control(9 + i) > 0) {
-      float value = (midi_get_control(9 + i)/127.0)*60;
+    int j = 9 + i + (i == 4)*3;  // midi controls 9, 10, 11, 12, 16
+    if (midi_get_control(j) > 0) {
+      float value = midi_get_control_exp(j, 30, 120);
       if (pulses[i] >= value) {
         pulses[i] *= 1.05;
       } else pulses[i] = value;
     } else {
-      pulses[i] *= 0.7;
+      pulses[i] *= 0.84;
       if (pulses[i] < 0.1) { pulses[i] = 0; }
     }
   }
 
+  // Copy away the spine
+  for (r = 0; r < NUM_ROWS; r++) {
+    spine[r] = pixels[pixel_index(r, 12)];
+  }
+
   float brightness[NUM_ROWS];
+  float spine_brightness[NUM_ROWS];
   // control 1: dim all barrels
   // control 2: desaturate
   // control 3: spotlight size & brightness
@@ -1229,6 +1862,7 @@ void next_frame(int frame) {
   for (int r = 0; r < NUM_ROWS; r++) {
     float dist = fabs(((float) r)/NUM_ROWS - spot_pos)*spot_size;
     brightness[r] = dim_level + spot_gain*spot_gain/(1 + dist*dist*dist*dist);
+    spine_brightness[r] = 1 + spot_gain*spot_gain/(1 + dist*dist*dist*dist);
   }
   for (int i = 0; i < 4; i++) {
     if (pulses[i] > 0) {
@@ -1238,6 +1872,7 @@ void next_frame(int frame) {
       for (int r = 0; r < NUM_ROWS; r++) {
         float dist = fabs(((float) r)/NUM_ROWS - spot_pos)*spot_size;
         brightness[r] += spot_gain*spot_gain/(1 + dist*dist*dist*dist);
+        spine_brightness[r] += spot_gain*spot_gain/(1 + dist*dist*dist*dist);
       }
     }
   }
@@ -1258,16 +1893,32 @@ void next_frame(int frame) {
       x = gain * (blue + (gain > 1 ? gain - 1 : 0));
       p->b = x > 255 ? 255 : x;
     }
+    gain = spine_brightness[r];
+    pixel* p = spine + r;
+    float x = gain * (p->r + (gain > 1 ? gain - 1 : 0));
+    p->r = x > 255 ? 255 : x;
+    x = gain * (p->g + (gain > 1 ? gain - 1 : 0));
+    p->g = x > 255 ? 255 : x;
+    x = gain * (p->b + (gain > 1 ? gain - 1 : 0));
+    p->b = x > 255 ? 255 : x;
   }
 
-  for (int i = 0; i < NUM_PATTERNS; i++) {
-    if (midi_get_note(i + 1)) {
-      if (curp) {
-        next_pattern_override_start = curp->frame;
-      }
-      time_to_next_pattern = 0;
-      next_pattern = i;
+  for (int i = 0; i < HEAD_PIXELS; i++) {
+    pixel* p = &head[i];
+    p->r *= dim_level;
+    p->g *= dim_level;
+    p->b *= dim_level;
+  }
+
+  i = midi_pattern_selected();
+  if (i >= 0) {
+    if (curp) {
+      // Start fading out the current pattern.
+      next_pattern_override_start = curp->frame;
     }
+    time_to_next_pattern = 0;
+    next_pattern = i;
+    requested_pattern = i;
   }
 
   if (red_thing >= -6) {
@@ -1287,6 +1938,9 @@ void next_frame(int frame) {
     }
   }
 
+  put_head_pixels((byte*) head, HEAD_PIXELS);
+  put_spine_pixels((byte*) spine, NUM_ROWS);
+
   for (int s = 0; s < NUM_SEGS; s++) {
     put_segment_pixels(s, (byte*) (pixels + s*SEG_PIXELS), SEG_PIXELS);
   }
@@ -1299,37 +1953,8 @@ void next_frame(int frame) {
     clear_button_sequence();
   }
 
-  if (strcmp(get_button_sequence(), "xxaxa") == 0) {
-    left_outer_eye_start -= 1;
-    clear_button_sequence();
-  }
-  if (strcmp(get_button_sequence(), "xxaxb") == 0) {
-    left_outer_eye_start += 1;
-    clear_button_sequence();
-  }
-  if (strcmp(get_button_sequence(), "xxbxa") == 0) {
-    right_outer_eye_start -= 1;
-    clear_button_sequence();
-  }
-  if (strcmp(get_button_sequence(), "xxbxb") == 0) {
-    right_outer_eye_start += 1;
-    clear_button_sequence();
-  }
-
   if (strcmp(get_button_sequence(), "ababxxx") == 0) {
     red_thing = -6;
     clear_button_sequence();
   }
-
-  // overwrite the eyes
-  pixel* p = (pixel*) pixels;
-  for (int i = 0; i < outer_eye_length; i++) {
-    p[left_outer_eye_start + i] = p[0];
-    p[right_outer_eye_start + i] = p[0];
-  }
-  for (int i = 0; i < inner_eye_length; i++) {
-    p[left_outer_eye_start + outer_eye_length + i] = p[NUM_PIXELS - 1];
-    p[right_outer_eye_start + outer_eye_length + i] = p[NUM_PIXELS - 1];
-  }
-  put_head_pixels((byte*) pixels, HEAD_PIXELS);
 }

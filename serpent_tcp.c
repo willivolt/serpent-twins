@@ -22,6 +22,7 @@ static byte serpent_mode = JULUNGGUL;
 
 static byte head[HEAD_PIXELS*3];
 static byte segments[NUM_SEGS][(SEG_PIXELS + FIN_PIXELS + LID_PIXELS)*3];
+static byte spine[NUM_ROWS*3];
 static byte fins[NUM_SEGS*FIN_PIXELS*3];
 static byte* strand_ptrs[1 + NUM_SEGS] = {
   head,
@@ -65,6 +66,12 @@ static byte diagnostic_colours[11][3] = {
 #define JORM_SIDE_PIXELS 28
 #define JORM_SEG_PIXELS 99
 
+#define TAIL_FIN_START 100
+#define TAIL_FIN_COUNT 12
+#define TAIL_LANTERN_START 112
+#define TAIL_LANTERN_COUNT 22
+#define TAIL_PIXELS TAIL_LANTERN_START + TAIL_LANTERN_COUNT
+
 byte jormungand_segment[JORM_SEG_PIXELS*3];
 
 // On Jormungand, the spine pixels within a barrel alternate left and right.
@@ -80,18 +87,36 @@ void put_segment_pixels(int segment, byte* pixels, int n) {
   memcpy(segments[segment], pixels, n*3);
 }
 
+void put_spine_pixels(byte* pixels, int n) {
+  memcpy(spine, pixels, n*3);
+}
+
 void put_fin_pixels(byte* pixels, int n) {
   int s, b, i;
   byte* dest;
 
   for (s = 0; n > 0 && s < NUM_SEGS; s++) {
     dest = segments[s] + (SEG_PIXELS + FIN_PIXELS)*3;
+    if (s == 9) { // tail
+      dest = segments[s] + (TAIL_FIN_START + TAIL_FIN_COUNT)*3;
+    }
     for (i = 0; n > 0 && i < FIN_PIXELS; i++) {
       dest -= 3;
       dest[0] = *pixels++;
       dest[1] = *pixels++;
       dest[2] = *pixels++;
       n--;
+      if (s == 9) {
+        if (i == 0 || i == 1) {
+          // skip the first two input pixels
+          dest += 3;
+          pixels -= 3;
+        }
+        if (i == 6) {
+          // skip the output pixels between the tail fins
+          dest -= 15;
+        }
+      }
     }
   }
 }
@@ -381,7 +406,7 @@ int main(int argc, char* argv[]) {
   tcp_init();
 
   midi_init();
-  midi_set_control(6, 80);
+  midi_set_control(6, 10);
 
   while (1) {
     midi_poll();
@@ -390,32 +415,49 @@ int main(int argc, char* argv[]) {
       now = get_milliseconds();
     }
 
-    // White fin chaser light
-    int n = NUM_SEGS*FIN_PIXELS;
-    float speed = (midi_get_control(6) - 64)/20.0;
-    fcount += speed;
-    if (fcount < -n/2) { fcount += n; }
-    if (fcount > n/2) { fcount -= n; }
-    for (i = 0; i < n; i++) {
-      j = i;
-      float dist = (fcount - j) / (fabs(speed) + 1);
-      int fin_bright = (int) (600.0/(1 + dist*dist));
-      dist = (fcount - (j - n)) / speed;
-      fin_bright += (int) (600.0/(1 + dist*dist));
-      dist = (fcount - (j - n/2)) / speed;
-      fin_bright += (int) (600.0/(1 + dist*dist));
-      dist = (fcount - (j + n/2)) / speed;
-      fin_bright += (int) (600.0/(1 + dist*dist));
-      dist = (fcount - (j + n)) / speed;
-      fin_bright += (int) (600.0/(1 + dist*dist));
-      if (fin_bright > 255) fin_bright = 255;
-      fins[i*3 + 0] = fin_bright;
-      fins[i*3 + 1] = fin_bright;
-      fins[i*3 + 2] = fin_bright;
-    }
-    put_fin_pixels(fins, n);
-
     next_frame(frame++);
+
+    if (midi_get_control(6) > 0 && midi_get_control(6) < 16) {
+      // White fin chaser light
+      int n = NUM_SEGS*FIN_PIXELS;
+      float speed = (midi_get_control(6) - 8)/3.0;
+      fcount += speed;
+      if (fcount < -n/2) { fcount += n; }
+      if (fcount > n/2) { fcount -= n; }
+      for (i = 0; i < n; i++) {
+        j = i;
+        float dist = (fcount - j) / (fabs(speed) + 1);
+        int fin_bright = (int) (600.0/(1 + dist*dist));
+        dist = (fcount - (j - n)) / speed;
+        fin_bright += (int) (600.0/(1 + dist*dist));
+        dist = (fcount - (j - n/2)) / speed;
+        fin_bright += (int) (600.0/(1 + dist*dist));
+        dist = (fcount - (j + n/2)) / speed;
+        fin_bright += (int) (600.0/(1 + dist*dist));
+        dist = (fcount - (j + n)) / speed;
+        fin_bright += (int) (600.0/(1 + dist*dist));
+        if (fin_bright > 255) fin_bright = 255;
+        fins[i*3 + 0] = fin_bright;
+        fins[i*3 + 1] = fin_bright;
+        fins[i*3 + 2] = fin_bright;
+      }
+    } else {
+      float fin_level = (midi_get_control(6) - 31)/96.0;
+      if (fin_level < 0) {
+        fin_level = 0;
+      }
+      for (i = 0; i < NUM_SEGS*FIN_PIXELS; i++) {
+        float t = (NUM_ROWS - 1) * ((float) i)/(NUM_SEGS*FIN_PIXELS - 1);
+        int k = (int) t;
+        pixel f = rgb_interpolate(
+            ((pixel*)spine)[k], ((pixel*)spine)[k + 1], t - k);
+        fins[i*3 + 0] = (int) f.r * fin_level;
+        fins[i*3 + 1] = (int) f.g * fin_level;
+        fins[i*3 + 2] = (int) f.b * fin_level;
+      }
+    }
+
+    put_fin_pixels(fins, NUM_SEGS*FIN_PIXELS);
 
     switch (serpent_mode) {
       case JULUNGGUL:
@@ -428,10 +470,11 @@ int main(int argc, char* argv[]) {
         break;
       case JORMUNGAND:
         tcp_put_pixels(1, head, HEAD_PIXELS);
-        for (s = 0; s < NUM_SEGS; s++) {
+        for (s = 0; s < NUM_SEGS - 1; s++) {
           remap_to_jormungand(s, segments[s], jormungand_segment);
           tcp_put_pixels(2 + s, jormungand_segment, JORM_SEG_PIXELS);
         }
+        tcp_put_pixels(11, segments[9], TAIL_PIXELS);
         break;
     }
 

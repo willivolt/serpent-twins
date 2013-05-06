@@ -52,7 +52,7 @@ static byte clock_delay = 0;
 
 void next_frame(int frame) {
   int i, s;
-  int step = frame % (HEAD_PIXELS + 300);
+  int step = (frame/2) % 300; // (HEAD_PIXELS + 300);
   byte b;
 
   memset(head, 0, HEAD_PIXELS*3);

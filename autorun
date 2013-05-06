@@ -1,15 +1,29 @@
 #!/bin/bash
 
 export PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
-WHITE_IP=192.168.10.10
+WHITE_IP=192.168.10.12
 WHITE_WIZNET=192.168.10.88
-BLACK_IP=192.168.10.20
+BLACK_IP=192.168.10.22
 BLACK_WIZNET=192.168.10.89
 unset WHITE_SERPENT
 unset BLACK_SERPENT
 
-# Begin by putting ourselves on a random IP address. 
-TEST_IP=192.168.10.$(perl -e 'print 200+int(rand()*50)')
+# To ensure the next boot is fast, remove startup stuff we don't need.
+rm -f /etc/rc*.d/*alsa-state*
+rm -f /etc/rc*.d/*autorun*
+rm -f /etc/rc*.d/*avahi*
+rm -f /etc/rc*.d/*mountnfs*
+rm -f /etc/rc*.d/*usb-gadget*
+echo -e "auto lo\niface lo inet loopback\n" > /etc/network/interfaces
+
+# Set up autorun on boot.
+echo "/home/root/bin/autorun &" > /etc/init.d/autorun
+chmod 755 /etc/init.d/autorun
+ln -s ../init.d/autorun /etc/rc5.d/S41autorun
+
+# Begin by putting ourselves on a random IP address.
+# One of the Bullets is serving DHCP addresses 200 and up, so stay below 200.
+TEST_IP=192.168.10.$(perl -e 'print 150+int(rand()*50)')
 ifconfig usb0 up $TEST_IP
 
 # Ping both Wiznet receivers.
@@ -19,14 +33,17 @@ rm -f /tmp/rtt.white /tmp/rtt.black
 
 # Wait for at least one of them to respond.
 sleep 0.5
+let i=0
 while [ ! -s /tmp/rtt.white -a ! -s /tmp/rtt.black ]; do
   sleep 0.5
+  let i=i+1
+  if [ "$i" -gt 10 ]; then break; fi
 done
 
 # Figure out which one is nearer (or present at all).
 WHITE_RTT=$(cat /tmp/rtt.white)
 BLACK_RTT=$(cat /tmp/rtt.black)
-export SERPENT=$(perl -e "print ((('$WHITE_RTT' || 1e6) < ('$BLACK_RTT' || 1e6)) ? 'WHITE' : 'BLACK')")
+export SERPENT=$(perl -e "print ((('$BLACK_RTT' || 1e6) < ('$WHITE_RTT' || 1e6)) ? 'BLACK' : 'WHITE')")
 
 # Set the IP address of the Wiznet receiver to use.
 echo -e "WHITE_RTT=$WHITE_RTT, BLACK_RTT=$BLACK_RTT, SERPENT=$SERPENT\r\n"
@@ -39,17 +56,49 @@ else
   export BLACK_SERPENT=1
   LOCAL_IP=$BLACK_IP
 fi
-echo -e "\r\n"
 echo -e "Detected $SERPENT serpent, using $LOCAL_IP -> $(cat /tmp/serpent).\r\n"
-echo -e "\r\n"
 ifconfig usb0 up $LOCAL_IP
-ifconfig usb0
-echo -e "\r\n"
+
+# Build the serpent binary if necessary.
+if [ ! -f /home/root/bin/serpent ]; then
+  cd /home/root/dev/serpent
+  ./build master
+  cp bin/master /home/root/bin/serpent
+  sync
+fi
+
+# Set up MIDI devices.
+ln -sf /dev/midi1 /tmp/midi1.in
+ln -sf /dev/midi1 /tmp/midi1.out
+ln -sf /dev/midi2 /tmp/midi2.in
+ln -sf /dev/midi2 /tmp/midi2.out
+ln -sf /dev/midi3 /tmp/midi3.in
+ln -sf /dev/midi3 /tmp/midi3.out
+if [ -c /dev/midi1 ]; then echo -e '\x90\x10\x7f' > /dev/midi1; fi
+if [ -c /dev/midi2 ]; then echo -e '\x90\x10\x7f' > /dev/midi2; fi
+if [ -c /dev/midi3 ]; then echo -e '\x90\x10\x7f' > /dev/midi3; fi
+rm /tmp/midi4.in
+rm /tmp/midi4.out
+mkfifo /tmp/midi4.in
+mkfifo /tmp/midi4.out
+
+cd /home/root/bin
+cat > midipipe <<EOF
+#!/bin/bash
+
+while true; do
+  echo Starting nc...
+  cat /tmp/midi4.out | nc -l -p 12345 > /tmp/midi4.in
+done
+EOF
+chmod 755 midipipe
 
 # Start the serpent program in a screen session.
-cd /home/root/bin
-echo "screen ./serpent" > /tmp/screenrc
-ln -sf /dev/midi1 /tmp/midi.in
-ln -sf /dev/midi1 /tmp/midi.out
-echo -e '\x90\x10\x7f' > /tmp/midi.out
+echo -e "Starting serpent.\r\n"
+cat > /tmp/screenrc <<EOF
+screen ./midipipe
+screen ./serpent
+EOF
 screen -dmS serpent -c /tmp/screenrc
+screen -list
+echo -e "\r\n"

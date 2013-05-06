@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -87,7 +88,6 @@ void tcp_init() {
     }
     sock = tcp_connect(ipaddr, port);
   }
-  tcp_init_addresses();
 }
 
 void tcp_send_sync(const byte* buf, int len) {
@@ -107,55 +107,18 @@ void tcp_send_sync(const byte* buf, int len) {
   }
 }
 
-void tcp_init_addresses() {
-  byte command[6];
-  byte address;
-
-  // Tell all nodes to forget their addresses.
-  command[0] = ADDRESS_BROADCAST;
-  command[1] = CHANNEL_COMMAND;
-  command[2] = 0;  // data length = 1 byte
-  command[3] = 1;  // data length = 1 byte
-  command[4] = CMD_FORGET;
-  tcp_send_sync(command, 5);
-
-  // Assign addresses to each node.
-  command[0] = ADDRESS_BROADCAST;
-  command[1] = CHANNEL_COMMAND;
-  command[2] = 0;  // data length = 2 bytes
-  command[3] = 2;  // data length = 2 bytes
-  for (address = 1; address < 63; address++) {
-    command[4] = CMD_PREPARE;
-    command[5] = address;
-    tcp_send_sync(command, 6);
-
-    command[4] = CMD_COMMIT;
-    command[5] = address;
-    tcp_send_sync(command, 6);
-  }
-}
-
-byte tcp_buffer[1000*3];
-
 void tcp_put_pixels(byte address, byte* pixels, int n) {
   byte header[4];
-  int length = n*3 + 3;
-  byte* dest = tcp_buffer;
-  int i;
-  for (i = 0; i < n; i++) {
-    *dest++ = pixels[0];  // red
-    *dest++ = pixels[1];  // green
-    *dest++ = pixels[2];  // blue
-    pixels += 3;
-  }
-  // Sometimes the last pixel doesn't get set; add three bytes for reliability.
-  *dest++ = 0;
-  *dest++ = 0;
-  *dest++ = 0;
+  byte extra_pixel[3] = {0, 0, 0};
+  int length;
+
+  // Sometimes the last pixel doesn't get set; add one extra for reliability.
+  length = n*3 + 3;
   header[0] = address;
   header[1] = CHANNEL_LED;
   header[2] = length >> 8;
   header[3] = length & 0xff;
   tcp_send_sync(header, 4);
-  tcp_send_sync(tcp_buffer, length);
+  tcp_send_sync(pixels, n*3);
+  tcp_send_sync(extra_pixel, 3);
 }

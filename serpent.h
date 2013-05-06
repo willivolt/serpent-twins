@@ -80,9 +80,13 @@ typedef struct { byte r, g, b; } pixel;
   *(__d++) = *(__s++); \
 }
 
+// limits a value to an interval
+#define clamp(x, min, max) ((x) < (min) ? (min) : (x) > (max) ? (max) : (x))
+
 void put_head_pixels(byte* pixels, int n);
 void put_segment_pixels(int segment, byte* pixels, int n);
 void put_fin_pixels(byte* pixels, int n);
+void put_spine_pixels(byte* pixels, int n);
 void next_frame(int frame);
 int read_button(char b);  // 'a', 'b', 'x', or 'y'
 const char* get_button_sequence();
