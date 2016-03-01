@@ -1,0 +1,1 @@
+![http://serpent-twins.googlecode.com/files/SerpentNetworkDiagram.jpg](http://serpent-twins.googlecode.com/files/SerpentNetworkDiagram.jpg)
